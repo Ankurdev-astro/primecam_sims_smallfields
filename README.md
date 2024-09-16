@@ -11,15 +11,24 @@ This file should be put inside `./input_files/`
 
 ### First let's start with timestream simulation.
 
-Usage: `python sim_data_primecam.py --test-run`
-For full production run: `python sim_data_primecam.py`
+##### Usage: 
+
+`export OMP_NUM_THREADS=NUM_THREADS`
+
+`mpirun -np N_PROCS python sim_data_primecam_mpi.py --sch SCHEDULE_FILE`
+
+The GROUP_SIZE for the problem is calculated based on the runtime parameters. User may set group size as:
+
+`mpirun -np N_PROCS python sim_data_primecam_mpi.py -s SCHEDULE_FILE -g GROUP_SIZE`
+
+Note: Provide only the schedule file name, not the full path.
 
 This shall create 'ccat_datacenter_mock' dir. All observations are stored here. 
-Context dir and Maximum-Likelihood Map outputs will be stored here.
+Context dir and Maximum-Likelihood Map outputs will be stored here. The test dir is 'data_detcen_testmpi'
 
 ### Next: Processing and Map-making pipeline:
 
-Usage: 
+##### Usage: 
 `primecam_integrated_pipeline.py --h5-dirs ./ccat_datacenter_mock/path_to_obs_dir`
 
 `--h5-dir` can take multiple args: to load all obs, for example:
