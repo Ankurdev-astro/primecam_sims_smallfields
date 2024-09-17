@@ -68,7 +68,7 @@ echo "***********************"
 echo ""
 ###python3 matplotlib_test.py
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-mpirun -np $SLURM_NTASKS python3 sim_data_primecam_mpi.py --test-run
+mpirun -np $SLURM_NTASKS python3 sim_data_primecam_mpi.py -s schedule_1scan.txt
 
 
 echo ""
