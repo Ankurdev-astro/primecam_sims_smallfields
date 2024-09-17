@@ -25,7 +25,9 @@
 #02-04-2024: Updated Atmosphere implementationi
 #25-06-2024: Implementing tests for sinosoidal modulation
 #14-09-2024: Implementing changes for mpirun
-# primecam_mockdata_pipeline takes now schedule object rather than sch file path
+#15-09-2024: primecam_mockdata_pipeline func takes now schedule object rather than sch file path
+#15-09-2024: Implemented group size calculation and accept user values for MPI
+#16-09-2024: Script now accepts schedule file name as argument
 ###
 
 """
@@ -68,7 +70,7 @@ import time as t
 # Define the global args class
 class args:
     # Focalplane file
-    focalplane_pkl = "dets_FP_PC280_10_w12_updated.pkl"
+    focalplane_pkl = "dets_FP_PC280_100_w12_updated.pkl"
     
     weather = 'atacama'
     sample_rate = 244 * u.Hz #488 Hz
@@ -80,7 +82,7 @@ class args:
     scan_accel_az = 4  * (u.deg / u.s**2)
     fov = 1.3 * u.deg # Field-of-view in degrees
     # g3_outdir = "./g3_dataframes"
-    h5_outdir = "./ccat_datacenter_mock/data_detcen_testmpi/"
+    h5_outdir = "./ccat_datacenter_mock/data_testmpi/"
 
     mode = "IQU" #"IQU"
     input_map = "pysm3_map_nside2048_allStokes.fits"
@@ -392,8 +394,8 @@ def main():
         epilog="Note: Provide only the name of the schedule file, not the path. \n \
             The schedule file must be in the 'input_files/schedules' directory.")
     # Required argument for the schedule file
-    parser.add_argument('--sch', required=True, help="Name of the schedule file")
-    parser.add_argument('--grp_size', default=None, type=int, help="Group size (optional)")
+    parser.add_argument('s','--sch', required=True, help="Name of the schedule file")
+    parser.add_argument('g','--grp_size', default=None, type=int, help="Group size (optional)")
 
     parsed_args = parser.parse_args()
     

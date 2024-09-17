@@ -24,7 +24,7 @@ The GROUP_SIZE for the problem is calculated based on the runtime parameters. Us
 Note: Provide only the schedule file name, not the full path.
 
 This shall create 'ccat_datacenter_mock' dir. All observations are stored here. 
-Context dir and Maximum-Likelihood Map outputs will be stored here. The test dir is 'data_detcen_testmpi'
+Context dir and Maximum-Likelihood Map outputs will be stored here. The test dir is 'data_testmpi'
 
 ### Next: Processing and Map-making pipeline:
 
