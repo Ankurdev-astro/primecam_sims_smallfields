@@ -1,5 +1,12 @@
 #!/bin/bash
 
+###############################################
+### Example SLURM script for primecam_sims ####
+###                                        ####
+###     Tested on Uni Bonn Marvin Cluster  ####
+###             v1.0 , 17.09.2024          ####
+###############################################
+
 ### section 1 - SLURM params
 
 #SBATCH --partition=intelsr_short  # cluster specific / intelsr_short, lm_short
