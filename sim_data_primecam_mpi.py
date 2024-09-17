@@ -62,7 +62,7 @@ import pickle as pkl
 
 import numpy as np
 from datetime import datetime
-import os, requests
+import os
 import argparse
 import random
 import time as t
@@ -394,8 +394,8 @@ def main():
         epilog="Note: Provide only the name of the schedule file, not the path. \n \
             The schedule file must be in the 'input_files/schedules' directory.")
     # Required argument for the schedule file
-    parser.add_argument('s','--sch', required=True, help="Name of the schedule file")
-    parser.add_argument('g','--grp_size', default=None, type=int, help="Group size (optional)")
+    parser.add_argument('-s','--sch', required=True, help="Name of the schedule file")
+    parser.add_argument('-g','--grp_size', default=None, type=int, help="Group size (optional)")
 
     parsed_args = parser.parse_args()
     
