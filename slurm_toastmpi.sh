@@ -59,8 +59,8 @@ echo "Cores per Node: $SLURM_CPUS_ON_NODE"
 echo "Total Number of Nodes: $SLURM_JOB_NUM_NODES"
 echo "Current working directory is `pwd`"
 echo "Python path: $(which python)"
-echo "Python path: $(which mpirun)"
-echo "Python path: $(which gcc)"
+echo "Using MPI lib: $(which mpirun)"
+echo "Using GCC lib: $(which gcc)"
 echo ""
 
 ### section 4 - Job Run 
