@@ -4,7 +4,7 @@
 ### Example SLURM script for primecam_sims ####
 ###                                        ####
 ###     Tested on Uni Bonn Marvin Cluster  ####
-###             v1.0 , 17.09.2024          ####
+###             v1.1 , 16.10.2024          ####
 ###############################################
 
 ### section 1 - SLURM params
@@ -42,7 +42,8 @@ module purge
 ### load all modules needed for Job
 module load mpi4py
 ### initiate conda
-source /opt/software/easybuild-INTEL/software/Anaconda3/2022.05/etc/profile.d/conda.sh
+### source /opt/software/easybuild-INTEL/software/Anaconda3/2022.05/etc/profile.d/conda.shi
+source /opt/software/easybuild-INTEL/software/Miniforge3/24.1.2-0/etc/profile.d/conda.sh
 conda deactivate
 conda activate toast3
 
