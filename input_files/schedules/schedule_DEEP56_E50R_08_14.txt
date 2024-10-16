@@ -1,0 +1,7 @@
+#Site           Telescope        Latitude [deg] Longitude [deg]   Elevation [m]
+Cerro-Chajnantor FYST                    -22.986         -67.740          5610.0
+#     Start time UTC        Stop time UTC Rotation Patch name                            Az min   Az max       El  Pass Sub
+ 2025-08-14 03:32:06  2025-08-14 04:02:05     0.00 DEEP56_E50R_08_14                      50.00    76.00    50.00     0   0
+ 2025-08-14 04:02:06  2025-08-14 04:32:06     0.00 DEEP56_E50R_08_14                      50.00    76.00    50.00     1   0
+ 2025-08-14 04:32:06  2025-08-14 05:02:06     0.00 DEEP56_E50R_08_14                      50.00    76.00    50.00     2   0
+ 2025-08-14 05:02:06  2025-08-14 05:12:06     0.00 DEEP56_E50R_08_14                      50.00    76.00    50.00     3   0

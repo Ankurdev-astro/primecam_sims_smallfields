@@ -1,7 +1,7 @@
 ###
 #Timestream Simulation Script for Prime-cam
 ###
-###Last updated: March 22, 2024
+###Last updated: Oct 15, 2024
 ###
 #Author: Ankur Dev, adev@astro.uni-bonn-de
 ###
@@ -22,12 +22,14 @@
 #22-03-2024: Begin integrated script implemention
 #23-03-2024: Implemented multiple schedules
 #23-03-2024: Modified schedule field name; must be %field_%dd_%mm for uid
-#02-04-2024: Updated Atmosphere implementationi
+#02-04-2024: Updated Atmosphere implementation
 #25-06-2024: Implementing tests for sinosoidal modulation
 #14-09-2024: Implementing changes for mpirun
 #15-09-2024: primecam_mockdata_pipeline func takes now schedule object rather than sch file path
 #15-09-2024: Implemented group size calculation and accept user values for MPI
 #16-09-2024: Script now accepts schedule file name as argument
+#15-10-2024: Updated class Args, implemented number of detectors as arg requirement
+#15-10-2024: Updated h5_outdir to include ndets info in path
 ###
 
 """
@@ -53,9 +55,6 @@ from toast.mpi import MPI
 from toast.instrument_coords import quat_to_xieta
 from scripts.calc_groupsize import job_group_size
 
-# import yaml
-# from toast.schedule_sim_ground import run_scheduler
-
 import astropy.units as u
 from astropy.table import QTable, Column
 import pickle as pkl
@@ -68,27 +67,30 @@ import random
 import time as t
 
 # Define the global args class
-class args:
-    # Focalplane file
-    focalplane_pkl = "dets_FP_PC280_100_w12_updated.pkl"
-    
-    weather = 'atacama'
-    sample_rate = 244 * u.Hz #488 Hz
-    scan_rate_az = 1.0  * (u.deg / u.s) #on sky rate
-    #fix_rate_on_sky (bool):  If True, `scan_rate_az` is given in sky coordinates and azimuthal
-    #rate on mount will be adjusted to meet it.
-    #If False, `scan_rate_az` is used as the mount azimuthal rate. (default = True)
+class Args:
+    def __init__(self, parsed_args):   
+        self.weather = 'atacama'
+        self.focalplane_pkl = f"dets_FP_PC280_{parsed_args.dets}_w12_updated.pkl"
+        self.sample_rate = 488 * u.Hz #488 Hz # or 244 Hz
+        self.scan_rate_az = 0.75  * (u.deg / u.s) #on sky rate , or 1 deg/s
+        #fix_rate_on_sky (bool):  If True, `scan_rate_az` is given in sky coordinates and azimuthal
+        #rate on mount will be adjusted to meet it.
+        #If False, `scan_rate_az` is used as the mount azimuthal rate. (default = True)
 
-    scan_accel_az = 4  * (u.deg / u.s**2)
-    fov = 1.3 * u.deg # Field-of-view in degrees
-    # g3_outdir = "./g3_dataframes"
-    h5_outdir = "./ccat_datacenter_mock/data_testmpi/"
+        self.scan_accel_az = 2  * (u.deg / u.s**2) # or 4 deg/s^2
+        self.fov = 1.3 * u.deg # Field-of-view in degrees
+        # g3_outdir = "./g3_dataframes"
+        self.h5_outdir = os.path.join(
+            ".", "ccat_datacenter_mock", 
+            "data_testmpi", 
+            f"arc10_data_d{parsed_args.dets}"
+        )
 
-    mode = "IQU" #"IQU"
-    input_map = "pysm3_map_nside2048_allStokes.fits"
-    nside = 2048 #1024
-    freq = 280 * u.GHz
-    fwhm = 0.78 *u.arcmin
+        self.mode = "IQU" #"IQU"
+        self.input_map = "pysm3_map_nside2048_allStokes.fits"
+        self.nside = 2048 #1024
+        self.freq = 280 * u.GHz
+        self.fwhm = 0.78 *u.arcmin
     
 
 def reformat_dets(dets_pck):
@@ -172,7 +174,7 @@ def reformat_dets(dets_pck):
 
 
 
-def primecam_mockdata_pipeline(comm, focalplane, schedule, group_size):
+def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     #Set up logger and timer
     log = toast.utils.Logger.get()
     timer = toast.timing.Timer()
@@ -282,13 +284,13 @@ def primecam_mockdata_pipeline(comm, focalplane, schedule, group_size):
     mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
     log.info_rank(f"After Scanning Input Map:  {mem}", world_comm)
 
-    # exit(0)
     #Atmospheric simulation
     log.info_rank(f"Atmospheric simulation...", world_comm)
         #Atmosphere set-up
     rand_realisation = random.randint(10000, 99999)
-    tel_fov = 4* u.deg # 5* u.deg , changed 15.09.2024
-    cache_dir = None
+    tel_fov = 4* u.deg # 4* u.deg , changed 15.09.2024
+    # cache_dir = None
+    cache_dir = "./atm_cache"
 
     sim_atm_coarse =toast.ops.SimAtmosphere(
                     name="sim_atm_coarse",
@@ -312,7 +314,6 @@ def primecam_mockdata_pipeline(comm, focalplane, schedule, group_size):
     sim_atm_coarse.realization = 1000000 + rand_realisation
     sim_atm_coarse.field_of_view = tel_fov
     # telescope.focalplane.field_of_view * 1.3 #5* u.deg () for 100 dets
-    #5* u.deg for 10 dets
     sim_atm_coarse.detector_pointing = det_pointing_azel
     sim_atm_coarse.enabled = True  # Toggle to False to disable
     sim_atm_coarse.serial = False
@@ -395,9 +396,16 @@ def main():
             The schedule file must be in the 'input_files/schedules' directory.")
     # Required argument for the schedule file
     parser.add_argument('-s','--sch', required=True, help="Name of the schedule file")
+    parser.add_argument('-d', '--dets', 
+                        type=int, 
+                        choices=[10, 100, 200, 300, 400, 500, 750, 1000],
+                        default=100, 
+                        help="Number of detectors: 100, 200, 300, 400, 500, 750 or 1000")
     parser.add_argument('-g','--grp_size', default=None, type=int, help="Group size (optional)")
 
     parsed_args = parser.parse_args()
+    
+    args = Args(parsed_args)
     
     #Set up logger and timer
     log_global = toast.utils.Logger.get()
@@ -436,7 +444,10 @@ def main():
         f"Begin set-up and monitors for Simulating timestream data for PrimeCam/FYST",
         comm)
 
+    # Focalplane file
     fp_filename = os.path.join("input_files/fp_files", args.focalplane_pkl)
+    focalplane_pkl = f"dets_FP_PC280_{parsed_args.dets}_w12_updated.pkl" 
+    fp_filename = os.path.join("input_files/fp_files", focalplane_pkl)
     
     log_global.info_rank(f"Loading focalplane: {fp_filename}", comm)
 
@@ -460,7 +471,7 @@ def main():
     schedule.read(schedule_file, comm=comm)
     
     # Run the simulation pipeline
-    primecam_mockdata_pipeline(comm, focalplane, schedule, parsed_args.grp_size)
+    primecam_mockdata_pipeline(args, comm, focalplane, schedule, parsed_args.grp_size)
     log_global.info_rank(f"Wrote timestream data for {schedule_file} to disk", comm=comm)
 
     
