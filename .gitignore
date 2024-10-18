@@ -15,3 +15,4 @@ marvin_run.slurm.bck
 atm_cache/*
 Planck_Parchment_RGB.txt
 make_ml_map_primecam.py.bck
+dump_logs/*
