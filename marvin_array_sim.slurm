@@ -1,21 +1,21 @@
 #!/bin/bash
 
 ###############################################
-### Example SLURM script for primecam_sims ####
-###                                        ####
+###     SLURM script for primecam_sims     ####
+###      ARRAY JOB runs all schedules      ####
+###					   ####
 ###     Tested on Uni Bonn Marvin Cluster  ####
-###             v1.0 , 16.10.2024          ####
+###             v2.0 , 18.10.2024          ####
 ###############################################
 
 ### This script runs through all the schedule files
 ### launching SLURM ARRAY jobs for each schedule independently
-
-### section 0 - Runtime params
-### Set number of detectors for this simulation
+### NOTE: ndets parameter must be set in Section 4
 
 ### section 1 - SLURM params
 
-#SBATCH --partition=intelsr_short # cluster specific / intelsr_short, lm_short, lm_devel
+#SBATCH --partition=intelsr_short
+### cluster specific / intelsr_short, lm_short, lm_devel
 ### https://wiki.hpc.uni-bonn.de/en/running_jobs
 
 ### #SBATCH --ntasks 8      # number of procs to start
@@ -26,8 +26,8 @@
 #SBATCH --nodes 1  # number of nodes
 #SBATCH --array=0-23  # Define the array size, 24 schs
 
-#SBATCH --job-name=det200_n8c4_sim
-### #SBATCH --job-name=n8c12_s9det100 # Job name, #ntaskstotal#corespertask
+#SBATCH --job-name=det200_n8c4_sim 
+### Job name, det#ndets_#ntaskstotal_#corespertask_sim
 ### ntasks = 8, cpus=12, s9det100 seems best ~ 60min
 
 ### #ntasks = #nodes x #ntasks-per-node
@@ -37,7 +37,7 @@
 #SBATCH --mem-per-cpu=6G # mem per proc, baseline 6G
 ### #SBATCH --mem=130G                # max mem requested, per node
 ### Maximum requested time (days-hrs:min:sec)
-#SBATCH --time 0-02:30:00 #estimated runtime max 0-01:30:00
+#SBATCH --time 0-02:30:00 #estimated runtime max 0-02:30:00
 
 ### #SBATCH --mail-type=ALL   # notifications for job done & fail
 ### #SBATCH --mail-user=adev@astro.uni-bonn.de #user email for updates
@@ -105,8 +105,4 @@ echo "******** DONE *********"
 echo `date '+%F %H:%M:%S'`
 echo "***********************"
 
-### Log job resource usage into the output file
-echo ""
-echo "***********************"
-echo "****** RES USAGE ******"
 
