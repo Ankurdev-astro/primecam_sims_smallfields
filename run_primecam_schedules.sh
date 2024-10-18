@@ -54,7 +54,7 @@ do
     echo "****************"
     # Run the MPI command with the current schedule file
     # (nice -n 10 bash -c "echo -e '\n****************\n' ; /usr/bin/time -v mpirun -np 16 python sim_data_primecam_mpi.py -s \"$SCH_NAME\"") 2>&1 | tee -a toast_270924_arc10.log
-    mpirun -np 16 python src/sim_data_primecam_mpi.py -s $SCH_NAME -d 300
+    mpirun -np 16 python sim_data_primecam_mpi.py -s $SCH_NAME -d 300
 
     # Sleep for 5 sec before next simulation
     sleep 5
