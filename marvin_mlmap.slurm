@@ -9,27 +9,27 @@
 
 ### section 1 - SLURM params
 
-#SBATCH --partition=intelsr_devel  # cluster specific / intelsr_short, lm_short
+#SBATCH --partition=lm_short  # cluster specific / intelsr_short, lm_short
 ### https://wiki.hpc.uni-bonn.de/en/running_jobs
 
 ### #SBATCH --ntasks 8      # number of procs to start
 ### or
-#SBATCH --ntasks-per-node 4 # tasks per node ; num of processes per node
-#SBATCH --cpus-per-task 4 # number of cores per task ; threads per process
+#SBATCH --ntasks-per-node 16 # tasks per node ; num of processes per node
+#SBATCH --cpus-per-task 6 # number of cores per task ; threads per process
 
 #SBATCH --nodes 1  # number of nodes
 
-#SBATCH --job-name=n8c12_s9det100 # Job name, #ntaskstotal#corespertask
+#SBATCH --job-name=det200_n16c6_ml # Job name, #ntaskstotal#corespertask
 ### ntasks = 8, cpus=12, s9det100 seems best ~ 60min
 
 ### #ntasks = #nodes x #ntasks-per-node
 ### #ncores_total = #ntasks x #cpus-per-task
 ### #ncores_total_pernode = #ntasks-per-node x #cpus-per-task
 
-#SBATCH --mem-per-cpu=6G # mem per proc
+#SBATCH --mem-per-cpu=10G # mem per proc
 ### #SBATCH --mem=130G                # max mem requested, per node
 ### Maximum requested time (days-hrs:min:sec)
-#SBATCH --time 0-00:05:00 #estimated runtime max
+#SBATCH --time 0-07:30:00 #estimated runtime max
 
 ### #SBATCH --mail-type=ALL   # notifications for job done & fail
 ### #SBATCH --mail-user=adev@astro.uni-bonn.de #user email for updates
@@ -82,19 +82,19 @@ echo ""
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-## Build context data
+### Build context data
 echo ""
 echo "Building context data ..."
 echo ""
 mpirun -np $SLURM_NTASKS python write_context_primecam_mpi.py $FULL_DATA_PATH
 
-## Build Map Footprint
+### Build Map Footprint
 echo ""
 echo "Building map footprint ..."
 echo ""
 mpirun -np $SLURM_NTASKS python write_footprint_primecam_mpi.py
 
-## Build Map
+### Build Map
 echo ""
 echo "Building ML map ..."
 echo ""

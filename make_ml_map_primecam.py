@@ -12,6 +12,7 @@ from pixell import enmap, utils, fft, bunch, wcsutils, mpi
 import yaml
 from sotodlib.site_pipeline import util
 import logging
+from scripts.so_mlmap_logger import init
 
 defaults = {"query": "1",
             "odir": "./outputs",
@@ -98,7 +99,7 @@ def main(config_file=None, defaults=defaults, **args):
     # Create a report logger
     report_logger = logging.getLogger('report_logger')
     report_logger.setLevel(logging.DEBUG)  # Set the logging level
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG)  # Set the logging level for the handler
     console_handler.setFormatter(ColoredFormatter('%(message)s'))
     report_logger.addHandler(console_handler)
@@ -143,7 +144,8 @@ def main(config_file=None, defaults=defaults, **args):
     if args['prefix']: prefix += args['prefix'] + "_"
     utils.mkdir(args['odir'])
 
-    L = mapmaking.init(level=mapmaking.DEBUG, rank=comm.rank)
+    #L = mapmaking.init(level=mapmaking.DEBUG, rank=comm.rank)
+    L = init(level=mapmaking.DEBUG, rank=comm.rank)
     
     comm.Barrier()
     if comm.rank == 0:
