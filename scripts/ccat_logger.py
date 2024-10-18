@@ -1,4 +1,5 @@
 import logging
+import sys
 
 # Define a ML_pipeline FYST log level
 ML_PIPELINE_LEVEL = 25 # Choose a level between INFO (20) and WARNING (30)
@@ -14,7 +15,7 @@ logging.Logger.ml_pipeline = ml_pipeline
 def get_ccat_logger(rank=0):
     logger = logging.getLogger(__name__)
     logger.setLevel(ML_PIPELINE_LEVEL)
-    handler = logging.StreamHandler() 
+    handler = logging.StreamHandler(sys.stdout) 
     formatter = logging.Formatter(f"[Rank {rank}] %(levelname)s: %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
