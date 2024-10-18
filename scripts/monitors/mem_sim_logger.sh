@@ -6,7 +6,8 @@
 
 # Define variables
 LOG_FILE="../../logs/mpi_memory_sim.log"
-MPI_PROCESS_NAME="sim_data_primecam_mpi"  # Replace with your actual MPI process name
+#MPI_PROCESS_NAME="sim_data_primecam_mpi"  # process file name
+MPI_PROCESS_NAME="make_ml_map_primecam"
 SAMPLE_INTERVAL=5  # Sampling interval in seconds
 
 # Initialize the log file with a header

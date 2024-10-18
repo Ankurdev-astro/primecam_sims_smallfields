@@ -1,7 +1,6 @@
 __pycache__
 .ipynb_checkpoints
 __init__.py-*
-config.yaml
 primecam_integrated_pipeline.py
 write_context_primecam.py
 write_footprint_primecam.py
@@ -16,3 +15,5 @@ atm_cache/*
 Planck_Parchment_RGB.txt
 make_ml_map_primecam.py.bck
 dump_logs/*
+make_ml_map_primecam.outdated.py
+make_ml_map_primecam_latest.py

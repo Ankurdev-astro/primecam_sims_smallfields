@@ -49,7 +49,7 @@ def main():
     for idx_o, o in enumerate(obs):
         if idx_o % size == rank:
             logger.ml_pipeline(f"Processing Obs #{idx_o} ...")
-            # print(f"\n \t Observation details: {o}")
+            #print(f"\n \t Observation details: {o}")
             tod = ct.get_obs(o)
             # Promote TOD?
             fm = core.FlagManager.for_tod(tod)
