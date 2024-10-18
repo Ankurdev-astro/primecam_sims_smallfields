@@ -1,7 +1,6 @@
 __pycache__
 .ipynb_checkpoints
 __init__.py-*
-config.yaml
 primecam_integrated_pipeline.py
 write_context_primecam.py
 write_footprint_primecam.py
