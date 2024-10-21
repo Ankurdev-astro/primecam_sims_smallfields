@@ -7,6 +7,9 @@
 ###             v1.0 , 18.10.2024          ####
 ###############################################
 
+### This script run the ML-pipeline for a given set of detector TODs
+### NOTE: PARENT_DIR parameter must be set in Section 4
+
 ### section 1 - SLURM params
 
 #SBATCH --partition=lm_short  # cluster specific / intelsr_short, lm_short
@@ -26,10 +29,10 @@
 ### #ncores_total = #ntasks x #cpus-per-task
 ### #ncores_total_pernode = #ntasks-per-node x #cpus-per-task
 
-#SBATCH --mem-per-cpu=10G # mem per proc
+#SBATCH --mem-per-cpu=5G # mem per proc
 ### #SBATCH --mem=130G                # max mem requested, per node
 ### Maximum requested time (days-hrs:min:sec)
-#SBATCH --time 0-07:30:00 #estimated runtime max
+#SBATCH --time 0-02:30:00 #estimated runtime max
 
 ### #SBATCH --mail-type=ALL   # notifications for job done & fail
 ### #SBATCH --mail-user=adev@astro.uni-bonn.de #user email for updates
@@ -69,12 +72,15 @@ echo "Using MPI lib: $(which mpirun)"
 echo "Using GCC lib: $(which gcc)"
 echo ""
 
-PARENT_DIR="arc10_data_d200"
+### section 4 - Set Job parameters
+### Set TOD data dir
+PARENT_DIR="deep56_data_d200"
+
 DATA_DIR="ccat_datacenter_mock/data_testmpi/"
 FULL_DATA_PATH="${DATA_DIR}${PARENT_DIR}"
 ML_CONFIG="config.yaml"
 
-### section 4 - Job Run
+### section 5 - Job Run
 echo "***** EXEC SCRIPT *****"
 echo `date '+%F %H:%M:%S'`
 echo "***********************"

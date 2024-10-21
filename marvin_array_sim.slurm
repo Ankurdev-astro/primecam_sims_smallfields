@@ -3,7 +3,7 @@
 ###############################################
 ###     SLURM script for primecam_sims     ####
 ###      ARRAY JOB runs all schedules      ####
-###					   ####
+###					                       ####
 ###     Tested on Uni Bonn Marvin Cluster  ####
 ###             v2.0 , 18.10.2024          ####
 ###############################################
@@ -34,10 +34,10 @@
 ### #ncores_total = #ntasks x #cpus-per-task
 ### #ncores_total_pernode = #ntasks-per-node x #cpus-per-task
 
-#SBATCH --mem-per-cpu=6G # mem per proc, baseline 6G
+#SBATCH --mem-per-cpu=8G # mem per proc, baseline 8G
 ### #SBATCH --mem=130G                # max mem requested, per node
 ### Maximum requested time (days-hrs:min:sec)
-#SBATCH --time 0-02:30:00 #estimated runtime max 0-02:30:00
+#SBATCH --time 0-03:00:00 #estimated runtime max 0-03:00:00
 
 ### #SBATCH --mail-type=ALL   # notifications for job done & fail
 ### #SBATCH --mail-user=adev@astro.uni-bonn.de #user email for updates
@@ -79,13 +79,16 @@ echo "Using MPI lib: $(which mpirun)"
 echo "Using GCC lib: $(which gcc)"
 echo ""
 
-### section 4 - Job Run
+### section 4 - Set Job parameters
+### Set number of detectors
+ndets=200
+
+### section 5 - Job Run
 echo "***** EXEC SCRIPT *****"
 echo `date '+%F %H:%M:%S'`
 echo "***********************"
 echo ""
 
-ndets=200
 ### Collect all schedule files from input dir
 schedule_files_list=($(basename -a input_files/schedules/*.txt))
 ### Select schedule based on array index

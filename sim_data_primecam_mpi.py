@@ -83,7 +83,7 @@ class Args:
         self.h5_outdir = os.path.join(
             ".", "ccat_datacenter_mock", 
             "data_testmpi", 
-            f"arc10_data_d{parsed_args.dets}"
+            f"deep56_data_d{parsed_args.dets}"
         )
 
         self.mode = "IQU" #"IQU"
@@ -399,9 +399,9 @@ def main():
     parser.add_argument('-s','--sch', required=True, help="Name of the schedule file")
     parser.add_argument('-d', '--dets', 
                         type=int, 
-                        choices=[10, 100, 200, 300, 400, 500, 750, 1000],
+                        choices=[100, 200, 300, 400, 500],
                         default=100, 
-                        help="Number of detectors: 100, 200, 300, 400, 500, 750 or 1000")
+                        help="Number of detectors: 100, 200, 300, 400, 500")
     parser.add_argument('-g','--grp_size', default=None, type=int, help="Group size (optional)")
 
     parsed_args = parser.parse_args()
