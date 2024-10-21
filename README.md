@@ -38,7 +38,8 @@ python sim_data_primecam_mpi.py -h
 
 This shall create 'ccat_datacenter_mock' dir. All observations are stored here. 
 Context dir and Maximum-Likelihood Map outputs will be stored here.
-All simulated data will be saved in ./ccat_datacenter_mock/data_testmpi/deep56_data_d{NUM_DETS}, with the required directories created automatically by the code.
+
+All simulated data will be saved in `./ccat_datacenter_mock/data_testmpi/deep56_data_d{NUM_DETS}`, with the required directories created automatically by the code.
 
 An example SLURM script is provided that uses ARRAY JOBS to process all schedules listed in `./input_files/schedules`. 
 
