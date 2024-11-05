@@ -158,3 +158,35 @@ def job_group_size(
         raise RuntimeError(msg)
 
     return group_nodes * procs_per_node
+
+def estimate_group_size(
+    world_comm,
+    schedule
+    ):
+    """
+    Estimate the lowest group size possible for the given schedule and world_comm.
+    n_groups must be less than n_scans
+    """
+    
+    if world_comm is not None:
+        rank = world_comm.rank
+        nprocs = world_comm.size
+    nscans = len(schedule.scans)
+    # Start from the minimum allowed group size
+    # grp_size = 2
+    grp_size = 1
+    
+    # Loop until we reach the max value, which is nprocs
+    while grp_size <= nprocs:
+        # Check if grp_size is a factor of nprocs
+        if nprocs % grp_size == 0:
+            # Calculate number of groups that this grp_size would create
+            ngrps = nprocs // grp_size
+            # Ensure that the number of groups does not exceed nscans
+            if ngrps <= nscans:
+                break  # Found a valid grp_size that meets all conditions
+        # Increment grp_size to try the next possible value
+        grp_size += 1
+
+    # If no smaller grp_size meets the criteria, return nprocs as the default (max group size)
+    return grp_size if grp_size < nprocs else nprocs

@@ -53,7 +53,7 @@ import toast.io as io
 import toast.ops
 from toast.mpi import MPI
 from toast.instrument_coords import quat_to_xieta
-from scripts.calc_groupsize import job_group_size
+from scripts.calc_groupsize import job_group_size, estimate_group_size
 
 import astropy.units as u
 from astropy.table import QTable, Column
@@ -180,19 +180,21 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     timer = toast.timing.Timer()
     timer.start()
     
-    # if args.group_size is not None:
     if group_size is not None:
-        log.info_rank(f"Job group size: {group_size}", comm)
         # Create the toast communicator with specified group size
         toast_comm = toast.Comm(world=comm, groupsize=group_size)
+        log.info_rank(f"Job group size: {toast_comm.group_size}", comm)
+        log.info_rank(f"Number of process groups: {toast_comm.ngroups}", comm)
     else:
         log.info_rank(f"Begin job planning ...", comm)
-        grp_size_calc = job_group_size(world_comm=comm, schedule=schedule,
-                                       focalplane=focalplane)
-        log.info_rank(f"Job group size: {grp_size_calc}", comm)
+        # grp_size_calc = job_group_size(world_comm=comm, schedule=schedule,
+        #                                focalplane=focalplane)
+        grp_size_calc = estimate_group_size(world_comm=comm, schedule=schedule)
         # Create the toast communicator
         toast_comm = toast.Comm(world=comm, groupsize=grp_size_calc)
-        
+        log.info_rank(f"Job group size: {toast_comm.group_size}", comm)
+        log.info_rank(f"Number of process groups: {toast_comm.ngroups}", comm)
+    
     # Shortcut for the world communicator
     world_comm = toast_comm.comm_world
 

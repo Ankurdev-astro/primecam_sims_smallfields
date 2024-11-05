@@ -54,7 +54,13 @@ do
     echo "****************"
     # Run the MPI command with the current schedule file
     # (nice -n 10 bash -c "echo -e '\n****************\n' ; /usr/bin/time -v mpirun -np 16 python sim_data_primecam_mpi.py -s \"$SCH_NAME\"") 2>&1 | tee -a toast_270924_arc10.log
-    mpirun -np 16 python sim_data_primecam_mpi.py -s $SCH_NAME -d 300
+    # mpirun -np 16 python sim_data_primecam_mpi.py -s $SCH_NAME -d 300 -g 2
+    mpirun -n 16 python sim_data_primecam_mpi.py -s $SCH_NAME -d 300
+
+    # -g GRP_SIZE sets the number of processes per group
+    # N_GRP = N_TASKS / GRP_SIZE
+    # Max N_GRP must be less than N_OBS
+    # Smaller GRP_SIZE may be more efficient
 
     # Sleep for 5 sec before next simulation
     sleep 5
@@ -67,5 +73,5 @@ done
 # This will run the schedule files at indices 2, 3, and 4 in the array of schedule files.
 # Default START_IDX=0 and STOP_IDX=length of the array of schedule files.
 # Run as:
-# /usr/bin/time -v ./run_primecam_schedules.sh 2>&1 | tee -a logs/toast_270924_arc10.log
+# /usr/bin/time -v ./run_primecam_schedules.sh 0 1 2>&1 | tee -a logs/toast_270924_arc10.log
 
