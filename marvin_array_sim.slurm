@@ -3,7 +3,7 @@
 ###############################################
 ###     SLURM script for primecam_sims     ####
 ###      ARRAY JOB runs all schedules      ####
-###					                       ####
+###					   ####
 ###     Tested on Uni Bonn Marvin Cluster  ####
 ###             v2.0 , 18.10.2024          ####
 ###############################################
@@ -26,18 +26,18 @@
 #SBATCH --nodes 1  # number of nodes
 #SBATCH --array=0-23  # Define the array size, 24 schs
 
-#SBATCH --job-name=det200_n8c4_sim 
+#SBATCH --job-name=det500_n8c4_sim 
 ### Job name, det#ndets_#ntaskstotal_#corespertask_sim
-### ntasks = 8, cpus=12, s9det100 seems best ~ 60min
+### ntasks = 8, cpus=4, d200 seems best ~ 90min
 
 ### #ntasks = #nodes x #ntasks-per-node
 ### #ncores_total = #ntasks x #cpus-per-task
 ### #ncores_total_pernode = #ntasks-per-node x #cpus-per-task
 
-#SBATCH --mem-per-cpu=8G # mem per proc, baseline 8G
+#SBATCH --mem-per-cpu=9G # mem per proc, baseline 8G
 ### #SBATCH --mem=130G                # max mem requested, per node
 ### Maximum requested time (days-hrs:min:sec)
-#SBATCH --time 0-03:00:00 #estimated runtime max 0-03:00:00
+#SBATCH --time 0-03:30:00 #estimated runtime max 0-03:00:00
 
 ### #SBATCH --mail-type=ALL   # notifications for job done & fail
 ### #SBATCH --mail-user=adev@astro.uni-bonn.de #user email for updates
@@ -81,7 +81,7 @@ echo ""
 
 ### section 4 - Set Job parameters
 ### Set number of detectors
-ndets=200
+ndets=500
 
 ### section 5 - Job Run
 echo "***** EXEC SCRIPT *****"
