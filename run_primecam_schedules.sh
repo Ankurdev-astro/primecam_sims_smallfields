@@ -38,6 +38,23 @@ if [[ ! -z $2 ]]; then
     STOP_IDX=$2
 fi
 
+# Default value for NDETS
+NDETS=100
+# Read optional NDETS from command-line arguments
+if [[ ! -z $3 ]]; then
+    NDETS=$3
+fi
+
+# Focalplane file
+# Run the fp_trim script with the specified number of detectors (NDETS)
+python -m scripts.fp_scripts.fp_trim $NDETS
+# Check if the fp_trim script executed successfully
+if [ $? -ne 0 ]; then
+    # If there was an error, print an error message and exit the script
+    echo "Error occurred in FP generation script. Exiting."
+    exit 1
+fi
+
 # Simulation info from user
 echo "Running with 488 Hz sampling rate, scanning CES 0.75 deg/s, 2 deg/s^2 acc"
 
@@ -55,7 +72,7 @@ do
     # Run the MPI command with the current schedule file
     # (nice -n 10 bash -c "echo -e '\n****************\n' ; /usr/bin/time -v mpirun -np 16 python sim_data_primecam_mpi.py -s \"$SCH_NAME\"") 2>&1 | tee -a toast_270924_arc10.log
     # mpirun -np 16 python sim_data_primecam_mpi.py -s $SCH_NAME -d 300 -g 2
-    mpirun -n 16 python sim_data_primecam_mpi.py -s $SCH_NAME -d 300
+    mpirun -n 16 python sim_data_primecam_mpi.py -s $SCH_NAME -d $NDETS
 
     # -g GRP_SIZE sets the number of processes per group
     # N_GRP = N_TASKS / GRP_SIZE
@@ -73,5 +90,5 @@ done
 # This will run the schedule files at indices 2, 3, and 4 in the array of schedule files.
 # Default START_IDX=0 and STOP_IDX=length of the array of schedule files.
 # Run as:
-# /usr/bin/time -v ./run_primecam_schedules.sh 0 1 2>&1 | tee -a logs/toast_270924_arc10.log
+# /usr/bin/time -v ./run_primecam_schedules.sh 0 1 100 2>&1 | tee -a logs/toast_270924_arc10.log
 

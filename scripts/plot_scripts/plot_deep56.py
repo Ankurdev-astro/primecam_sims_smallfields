@@ -1,11 +1,15 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from astropy.io import fits
 import astropy.units as u
 from astropy.wcs import WCS
 import argparse
 import os
 from urllib.request import urlretrieve
+import matplotlib
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+
+
 
 def plot_deep56ML(fits_file,vmin,vmax,save):
     with fits.open(fits_file) as hdul:

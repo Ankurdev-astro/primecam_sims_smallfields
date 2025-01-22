@@ -6,10 +6,10 @@ set -e
 #********************#
 # Set run parameters
 export PYTHONPATH=/usr/lib/python3/dist-packages:$PYTHONPATH
-export OMP_NUM_THREADS=8
+export OMP_NUM_THREADS=4 #8
 
-nprocs=8
-tod_data_dir="ccat_datacenter_mock/arc10_data_testmpi_488hz/"
+nprocs=32 #8
+tod_data_dir="ccat_datacenter_mock/data_testmpi/deep56_data_d100"
 ml_config="config.yaml"
 
 #********************#
