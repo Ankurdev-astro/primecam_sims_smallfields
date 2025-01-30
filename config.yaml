@@ -12,9 +12,9 @@ site: 'so_lat'
 area: './ccat_datacenter_mock/context/geom.fits'
 
 # Output Directory and file name prefix
-odir: './ccat_datacenter_mock/maps_deep56'
+odir: './ccat_datacenter_mock/maps_deep56/'
 # Edit prefix as required
-prefix: 'mlmap_deep56_newd100' 
+prefix: 'mlmap_deep56_d1000' 
 
 # Detectors info. null by default
 #tods: [::100] # Restrict TOD selections by index
@@ -45,5 +45,5 @@ nocal: True
 # Scripting tools
 verbose: False
 quiet: True
-dump-write: False
+dump-write: True
 

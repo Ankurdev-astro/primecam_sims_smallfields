@@ -37,7 +37,7 @@ from os.path import normpath, basename
 from sotodlib.core import metadata
 from sotodlib.io.metadata import write_dataset
 from so3g.proj import quat
-from scripts.ccat_logger import get_ccat_logger
+from scripts.helper_scripts.ccat_logger import get_ccat_logger
 
 
 DEG = np.pi/180

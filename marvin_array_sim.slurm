@@ -20,13 +20,13 @@
 
 ### #SBATCH --ntasks 8      # number of procs to start
 ### or
-#SBATCH --ntasks-per-node 8 # tasks per node ; num of processes per node
+#SBATCH --ntasks-per-node 12 # tasks per node ; num of processes per node
 #SBATCH --cpus-per-task 4 # number of cores per task ; threads per process
 
 #SBATCH --nodes 1  # number of nodes
 #SBATCH --array=0-23  # Define the array size, 24 schs
 
-#SBATCH --job-name=det500_n8c4_sim 
+#SBATCH --job-name=det100_n12c4_sim 
 ### Job name, det#ndets_#ntaskstotal_#corespertask_sim
 ### ntasks = 8, cpus=4, d200 seems best ~ 90min
 
@@ -34,10 +34,10 @@
 ### #ncores_total = #ntasks x #cpus-per-task
 ### #ncores_total_pernode = #ntasks-per-node x #cpus-per-task
 
-#SBATCH --mem-per-cpu=9G # mem per proc, baseline 8G
-### #SBATCH --mem=130G                # max mem requested, per node
+### #SBATCH --mem-per-cpu=10G # mem per proc, baseline 8G
+#SBATCH --mem=400G                # max mem requested, per node [min 400G for 1000 dets]
 ### Maximum requested time (days-hrs:min:sec)
-#SBATCH --time 0-03:30:00 #estimated runtime max 0-03:00:00
+#SBATCH --time 0-00:05:00 #estimated runtime max 0-04:00:00
 
 ### #SBATCH --mail-type=ALL   # notifications for job done & fail
 ### #SBATCH --mail-user=adev@astro.uni-bonn.de #user email for updates
@@ -81,7 +81,7 @@ echo ""
 
 ### section 4 - Set Job parameters
 ### Set number of detectors
-ndets=500
+ndets=100
 
 ### section 5 - Job Run
 echo "***** EXEC SCRIPT *****"
@@ -100,8 +100,23 @@ echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Running schedule file: $schedule_file"
 echo "Number of dets: $ndets"
 echo ""
-mpirun -np $SLURM_NTASKS python3 sim_data_primecam_mpi.py -s $schedule_file -d $ndets
 
+### Making detector files
+## Check if the current array task ID is not 1
+if [ "$SLURM_ARRAY_TASK_ID" -ne 0 ]; then
+    sleep 5
+fi
+## Run the fp_trim script with the specified number of detectors (ndets)
+python -m scripts.fp_scripts.fp_trim $ndets
+## Check if the fp_trim script executed successfully
+if [ $? -ne 0 ]; then
+    # If there was an error, print an error message and exit the script
+    echo "Error occurred in FP file generation script. Exiting."
+    exit 1
+fi
+
+### Simulating timestream data from schedules
+mpirun -np $SLURM_NTASKS python3 sim_data_primecam_mpi.py -s $schedule_file -d $ndets
 
 echo ""
 echo "******** DONE *********"

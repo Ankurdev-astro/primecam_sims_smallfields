@@ -92,87 +92,6 @@ class Args:
         self.nside = 2048 #1024
         self.freq = 280 * u.GHz
         self.fwhm = 0.78 *u.arcmin
-    
-
-# def reformat_dets(dets_pck):
-#     # extract values for each column from detector dictionary
-#     det_names = list(dets_pck.keys())
-#     n_det = len(dets_pck)
-
-#     quats = [dets_pck[k]['quat'] for k in det_names]
-#     epsilon = 0.0 #The cross-polar response for all detectors.
-#     fwhm = dets_pck[det_names[0]]['fwhm'] * u.arcmin
-#     psd_net = dets_pck[det_names[0]]['NET'] * u.K * np.sqrt(1 * u.second)
-#     psd_fmin = dets_pck[det_names[0]]['fmin'] * u.Hz
-#     psd_fknee = dets_pck[det_names[0]]['fknee'] * u.Hz
-#     psd_alpha = dets_pck[det_names[0]]['alpha']
-#     bandcenter = dets_pck[det_names[0]]['bandcenter_ghz'] * u.GHz
-#     bandwidth = dets_pck[det_names[0]]['bandwidth_ghz'] * u.GHz
-#     fwhm_sigma = 0.0 * u.arcmin # Draw random detector FWHM values from a normal distribution with this width.
-#     bandcenter_sigma = 0.0 * u.GHz # Draw random bandcenter values from a normal distribution with this width.
-#     bandwidth_sigma = 0.0 * u.GHz # Draw random bandwidth values from a normal distribution with this width.
-#     wafer_slots = [dets_pck[k]['wafer_slot'] for k in det_names]
-#     IDs = [dets_pck[k]['ID'] for k in det_names]
-#     pixels = [dets_pck[k]['pixel'] for k in det_names]
-#     bands = [dets_pck[k]['band'] for k in det_names]
-#     pols = [dets_pck[k]['pol'] for k in det_names]
-#     indexes = [dets_pck[k]['index'] for k in det_names]
-
-#     gamma = []
-#     for quat in quats:
-#         _, _, temp_gamma = quat_to_xieta(quat)
-#         gamma.append(temp_gamma * u.rad)
-
-#     # Creating QTable
-#     # Skipping pol_leakage, pol_angle, pol_efficiency
-
-#     det_table = QTable([
-#         Column(name="name", data=det_names),
-#         Column(name="quat", data=quats),
-#         Column(name="pol_leakage", length=n_det, unit=None),
-#         Column(name="psi_pol", length=n_det, unit=u.rad),
-#         Column(name="gamma", length=n_det, unit=u.rad),
-#         Column(name="fwhm", length=n_det, unit=u.arcmin),
-#         Column(name="psd_fmin", length=n_det, unit=u.Hz),
-#         Column(name="psd_fknee", length=n_det, unit=u.Hz),
-#         Column(name="psd_alpha", length=n_det, unit=None),
-#         Column(name="psd_net", length=n_det, unit=(u.K * np.sqrt(1.0 * u.second))),
-#         Column(name="bandcenter", length=n_det, unit=u.GHz),
-#         Column(name="bandwidth", length=n_det, unit=u.GHz),
-#         Column(name="wafer_slot", data=wafer_slots),
-#         Column(name="ID", data=IDs),
-#         Column(name="pixel", data=pixels),
-#         Column(name="band", data=bands),
-#         Column(name="pol", data=pols),
-#         Column(name="index", data=indexes),
-#     ])
-
-#     det_table['gamma'] = gamma
-#     for idet, det in enumerate(dets_pck.keys()):
-#         det_table[idet]["pol_leakage"] = epsilon
-#         # psi_pol is the rotation from the PXX beam frame to the polarization
-#         # sensitive direction.
-#         if det.endswith("A"):
-#             det_table[idet]["psi_pol"] = 0 * u.rad
-#         else:
-#             det_table[idet]["psi_pol"] = np.pi / 2 * u.rad
-#         # det_table[idet]["gamma"] = det_gamma[idet]
-#         det_table[idet]["fwhm"] = fwhm * (
-#             1 + np.random.randn() * fwhm_sigma.to_value(fwhm.unit)
-#         )
-#         det_table[idet]["bandcenter"] = bandcenter * (
-#             1 + np.random.randn() * bandcenter_sigma.to_value(bandcenter.unit)
-#         )
-#         det_table[idet]["bandwidth"] = bandwidth * (
-#             1 + np.random.randn() * bandwidth_sigma.to_value(bandcenter.unit)
-#         )
-#         det_table[idet]["psd_fmin"] = psd_fmin
-#         det_table[idet]["psd_fknee"] = psd_fknee
-#         det_table[idet]["psd_alpha"] = psd_alpha
-#         det_table[idet]["psd_net"] = psd_net
-    
-#     return det_table
-
 
 
 def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
@@ -292,11 +211,10 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     log.info_rank(f"Atmospheric simulation...", world_comm)
         #Atmosphere set-up
     rand_realisation = random.randint(10000, 99999)
-    tel_fov = 3.5* u.deg  #4.5* u.deg # 4* u.deg , changed 16.10.2024
+    tel_fov = 4.5* u.deg # 4* u.deg , changed 16.10.2024
     # cache_dir = None
     cache_dir = "./atm_cache"
 
-    exit(0)
     sim_atm_coarse =toast.ops.SimAtmosphere(
                     name="sim_atm_coarse",
                     add_loading=False,
@@ -449,19 +367,6 @@ def main():
         comm)
 
     # Focalplane file
-    
-    #--------------------------------
-    # fp_filename = os.path.join("input_files/fp_files", args.focalplane_pkl)
-    # focalplane_pkl = f"dets_FP_PC280_{parsed_args.dets}_w12_updated.pkl" 
-    # fp_filename = os.path.join("input_files/fp_files", focalplane_pkl)   
-
-    # with open(fp_filename, "rb") as f:
-    #     dets_PC280 = pkl.load(f)
-
-    #Re-formatting FP
-    # det_table = reformat_dets(dets_pck = dets_PC280)
-    
-    #--------------------------------
     try:
         focalplane_file = f"dets_FP_PC280_{parsed_args.dets}_w2.h5"  
         fp_filename = os.path.join("input_files/fp_files", focalplane_file)
@@ -471,8 +376,6 @@ def main():
         raise  
     
     log_global.info_rank(f"Loading focalplane: {fp_filename}", comm)
-    
-    #--------------------------------
     
     # instantiate a TOAST focalplane instance 
     width = args.fov

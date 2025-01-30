@@ -1,7 +1,7 @@
 import argparse
 from mpi4py import MPI
 import os
-from scripts.ccat_logger import get_ccat_logger
+from scripts.helper_scripts.ccat_logger import get_ccat_logger
 
 from sotodlib import core, coords
 import numpy as np

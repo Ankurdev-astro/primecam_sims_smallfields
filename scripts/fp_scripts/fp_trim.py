@@ -61,18 +61,27 @@ def main():
     dets_trim_filename = f"dets_FP_PC280_{args.ndets_selected}_w2.h5"
     
     hf_trimtable_file = os.path.join(fp_dir, dets_trim_filename)
-    lockfile = hf_trimtable_file + ".lock"
-    lock = FileLock(lockfile)
+    # lockfile = hf_trimtable_file + ".lock"
+    # lock = FileLock(lockfile)
 
-    with lock:
-        if not os.path.exists(hf_trimtable_file):
-            # print("Generating trimmed detector table file ...")
-            sel_dettable = generate_trimmed_table(trim_dettable_w2, args.ndets_selected)
-            print(f"Number of selected detectors: {len(sel_dettable)}")
-            print(f"Writing trimmed detector table to {hf_trimtable_file} ...")
-            write_trimmed_table(sel_dettable, hf_trimtable_file)
+    # with lock:
+    #     if not os.path.exists(hf_trimtable_file):
+    #         # print("Generating trimmed detector table file ...")
+    #         sel_dettable = generate_trimmed_table(trim_dettable_w2, args.ndets_selected)
+    #         print(f"Number of selected detectors: {len(sel_dettable)}")
+    #         print(f"Writing trimmed detector table to {hf_trimtable_file} ...")
+    #         write_trimmed_table(sel_dettable, hf_trimtable_file)
         
-    os.remove(lockfile)
+    # if os.path.exists(lockfile):
+    #     os.remove(lockfile)
+    
+
+    if not os.path.exists(hf_trimtable_file):
+        # print("Generating trimmed detector table file ...")
+        sel_dettable = generate_trimmed_table(trim_dettable_w2, args.ndets_selected)
+        print(f"Number of selected detectors: {len(sel_dettable)}")
+        print(f"Writing trimmed detector table to {hf_trimtable_file} ...")
+        write_trimmed_table(sel_dettable, hf_trimtable_file)
 
 if __name__ == "__main__":
     main()

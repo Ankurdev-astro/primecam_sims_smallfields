@@ -1,4 +1,6 @@
 __pycache__
+scripts/__pycache__
+scripts/fp_scripts/__pycache__
 .ipynb_checkpoints
 __init__.py-*
 primecam_integrated_pipeline.py
@@ -17,3 +19,7 @@ make_ml_map_primecam.py.bck
 dump_logs/*
 make_ml_map_primecam.outdated.py
 make_ml_map_latest_sotodlib.py
+input_files/fp_files
+
+!input_files/fp_files/dets_FP_PC280_100_w2.h5
+!input_files/fp_files/fp_f280_dettable.h5

@@ -12,7 +12,7 @@ from pixell import enmap, utils, fft, bunch, wcsutils, mpi
 import yaml
 from sotodlib.site_pipeline import util
 import logging
-from scripts.so_mlmap_logger import init
+from scripts.helper_scripts.so_mlmap_logger import init
 
 defaults = {"query": "1",
             "odir": "./outputs",
@@ -358,7 +358,7 @@ def main(config_file=None, defaults=defaults, **args):
         
         # Dump out intermediate maps only id dump-write is set
         if args['dump-write']:
-            dump = step.i % 10 == 0
+            dump = step.i % 50 == 0
             L.info("CG step %4d %15.7e %8.3f %s" % (step.i, step.err, t2-t1, "" if not dump else "(write)"))
             if dump:
                 for signal, val in zip(signals, step.x):
