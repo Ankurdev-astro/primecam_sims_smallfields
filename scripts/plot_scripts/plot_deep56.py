@@ -1,3 +1,9 @@
+"""
+This is a script to plot the generated fits maps from ML-Mapmaker.
+This supports Intensity I maps only.
+Full stokes T,Q,U maps plotting not yet supported.
+"""
+
 import numpy as np
 from astropy.io import fits
 import astropy.units as u
@@ -9,9 +15,7 @@ import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
-
-
-def plot_deep56ML(fits_file,vmin,vmax,save):
+def plot_deep56ML(fits_file,vmin,vmax,save,title):
     with fits.open(fits_file) as hdul:
         image_data = hdul[0].data.squeeze()
     
@@ -106,12 +110,11 @@ def plot_deep56ML(fits_file,vmin,vmax,save):
     cbar.set_label(r'Intensity [$\mu$K]', size=18, weight='bold')
     cbar.ax.tick_params(labelsize=14)
 
-    plt.title('Deep 56 Field with mock 280GHz PrimeCam: \n10 dets, ~50 Hours', 
-            fontsize=22, fontweight='bold')
+    if title:
+        plt.title(title.replace(r'\n', '\n'), fontsize=22, fontweight='bold')
 
     if save:
         plt.savefig(save)
-        #plt.show()
     else:
         plt.show()
 
@@ -129,10 +132,14 @@ def main():
                         default=300, help="Maximum data value for colormap.")
     parser.add_argument('--save', type=str, 
                         help="Path to save the output plot.")
+    parser.add_argument('--title', type=str,
+                        default='Deep 56 Field with mock 280GHz PrimeCam: \n100 dets, ~100 Hours',
+                        help="Title for the plot")
 
     args = parser.parse_args()
 
-    plot_deep56ML(args.fits_file, args.vmin, args.vmax, args.save)
+    plot_deep56ML(args.fits_file, args.vmin, 
+                        args.vmax, args.save, args.title)
     
 if __name__ == '__main__':
     main()

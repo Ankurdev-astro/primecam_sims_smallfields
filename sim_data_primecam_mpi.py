@@ -1,7 +1,7 @@
 ###
 #Timestream Simulation Script for Prime-cam
 ###
-###Last updated: Oct 15, 2024
+###Last updated: Feb 04, 2025
 ###
 #Author: Ankur Dev, adev@astro.uni-bonn-de
 ###
@@ -11,8 +11,6 @@
 #ToDo: Implement config and CLI
 #ToDo: Implement CAR
 #ToDo: Verify and validate sequential steps
-#ToDo: Check max PWV
-#ToDo: Clean up
 ###
 ###[Self]Updates Log:
 #20-02-2024: Scraping TOAST2, Begin migration
@@ -31,6 +29,7 @@
 #15-10-2024: Updated class Args, implemented number of detectors as arg requirement
 #15-10-2024: Updated h5_outdir to include ndets info in path
 #22-01-2025: Updated focalplane file to h5 format, TOAST3 format
+#04-02-2025: Updated gains for atm sim
 ###
 
 """
@@ -207,9 +206,9 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
     log.info_rank(f"After Scanning Input Map:  {mem}", world_comm)
 
-    #Atmospheric simulation
+    ### Atmospheric simulation
     log.info_rank(f"Atmospheric simulation...", world_comm)
-        #Atmosphere set-up
+    #Atmosphere set-up
     rand_realisation = random.randint(10000, 99999)
     tel_fov = 4.5* u.deg # 4* u.deg , changed 16.10.2024
     # cache_dir = None
@@ -227,7 +226,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
                     zstep=50 * u.m,
                     zmax=2000 * u.m,
                     nelem_sim_max=30000,
-                    gain=2e-5,#6e-4, changed 02.04.2024
+                    gain=1e-5, #changed 04.02.2025 # 2e-5
                     realization=1000000,
                     wind_dist=10000 * u.m,
                     enabled=False,
@@ -236,14 +235,11 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
 
     sim_atm_coarse.realization = 1000000 + rand_realisation
     sim_atm_coarse.field_of_view = tel_fov
-    # telescope.focalplane.field_of_view * 1.3 #5* u.deg () for 100 dets
     sim_atm_coarse.detector_pointing = det_pointing_azel
     sim_atm_coarse.enabled = True  # Toggle to False to disable
     sim_atm_coarse.serial = False
     sim_atm_coarse.apply(data)
     log.info_rank(" Applied large-scale Atmosphere simulation in", comm=world_comm, timer=timer)
-
-    #------------------------#
 
     sim_atm_fine= toast.ops.SimAtmosphere(
             name="sim_atm_fine",
@@ -255,8 +251,8 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
             xstep=4 * u.m,
             ystep=4 * u.m,
             zstep=4 * u.m,
-            zmax=100 * u.m,
-            gain=4e-5, #changed 02.04.2024
+            zmax=200 * u.m, #changed 31.01.2025
+            gain=1e-5, #Changed 04.02.2025 4e-5
             wind_dist=1000 * u.m,
             enabled=False,
             cache_dir=cache_dir,
@@ -269,10 +265,10 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     sim_atm_fine.enabled = True  # Toggle to False to disable
     sim_atm_fine.serial = False
     sim_atm_fine.apply(data)
-    #------------------------#
 
     log.info_rank("Applied small-scale Atmosphere simulation in", comm=world_comm, timer=timer)
-
+    #------------------------#
+    
     #simulate detector noise
     sim_noise = toast.ops.SimNoise()
     sim_noise.noise_model = elevation_noise.out_model
@@ -288,7 +284,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     #end_unix = data.obs[len(data.obs)-1].shared["times"][0]
     #format_obs_startend = format_unix_times(start_unix, end_unix)
 
-    #Write to h5
+    ### Write to h5
     output_dir = args.h5_outdir
     module_code = args.freq.to_string().split('.0')[0]
     f_path = f"sim_PCAM{module_code}_h5_{field_name}_d{n_dets}"
