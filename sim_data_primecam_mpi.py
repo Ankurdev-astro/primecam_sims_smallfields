@@ -210,7 +210,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     log.info_rank(f"Atmospheric simulation...", world_comm)
     #Atmosphere set-up
     rand_realisation = random.randint(10000, 99999)
-    tel_fov = 4.5* u.deg # 4* u.deg , changed 16.10.2024
+    tel_fov = 1.5* u.deg # 4* u.deg , changed 17.02.2025
     # cache_dir = None
     cache_dir = "./atm_cache"
 
