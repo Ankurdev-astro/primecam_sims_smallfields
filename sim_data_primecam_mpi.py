@@ -30,6 +30,8 @@
 #15-10-2024: Updated h5_outdir to include ndets info in path
 #22-01-2025: Updated focalplane file to h5 format, TOAST3 format
 #04-02-2025: Updated gains for atm sim
+#21-09-2025: Updated all dets to correct for NET values
+#21-09-2025: Updated gains for atm sim
 ###
 
 """
@@ -70,7 +72,6 @@ import time as t
 class Args:
     def __init__(self, parsed_args):   
         self.weather = 'atacama'
-        self.focalplane_pkl = f"dets_FP_PC280_{parsed_args.dets}_w12_updated.pkl"
         self.sample_rate = 488 * u.Hz #488 Hz # or 244 Hz
         self.scan_rate_az = 0.75  * (u.deg / u.s) #on sky rate , or 1 deg/s
         #fix_rate_on_sky (bool):  If True, `scan_rate_az` is given in sky coordinates and azimuthal
@@ -226,7 +227,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
                     zstep=50 * u.m,
                     zmax=2000 * u.m,
                     nelem_sim_max=30000,
-                    gain=1e-5, #changed 04.02.2025 # 2e-5
+                    gain=1e-4, #1e-5, changed 20.09.2025
                     realization=1000000,
                     wind_dist=10000 * u.m,
                     enabled=False,
@@ -252,7 +253,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
             ystep=4 * u.m,
             zstep=4 * u.m,
             zmax=200 * u.m, #changed 31.01.2025
-            gain=1e-5, #Changed 04.02.2025 4e-5
+            gain=4e-5, #1e-5, changed 20.09.2035
             wind_dist=1000 * u.m,
             enabled=False,
             cache_dir=cache_dir,

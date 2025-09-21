@@ -20,11 +20,11 @@ def parse_arguments():
     parser.add_argument(
         "ndets_selected", 
         type=int, 
-        help="Number of detectors to select. Must be an even number and >= 100."
+        help="Number of detectors to select. Must be an even number and >= 10."
     )
     args = parser.parse_args()
-    if args.ndets_selected < 100 or args.ndets_selected % 2 != 0:
-        raise argparse.ArgumentTypeError("ndets_selected must be an even number and at least 100.")
+    if args.ndets_selected < 10 or args.ndets_selected % 2 != 0:
+        raise argparse.ArgumentTypeError("ndets_selected must be an even number and at least 10.")
     return parser.parse_args()
 
 def validate_selection(ndets_selected, total_dets):
