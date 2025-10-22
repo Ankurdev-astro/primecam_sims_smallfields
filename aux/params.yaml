@@ -1,0 +1,35 @@
+- --site-lat
+- '-22.9855235'
+- --site-lon
+- '-67.7403087'
+- --site-alt
+- '5610'
+- --site-name
+- Cerro-Chajnantor
+- --telescope
+- FYST
+- --patch-coord
+- C
+- --start
+- '2026-07-15 00:00:00'
+- --stop
+- '2026-07-16 23:00:00'
+- --patch
+- ORIONA_2026_07_15,1,84,-6,2.0
+- --el-min-deg
+- '40'
+- --el-max-deg
+- '65'
+- --sun-avoidance-angle-deg
+- '35'
+- --ces-max-time-s
+- '900'
+- --fp-radius-deg
+- '0.0'
+- --gap-s
+- '0.0'
+- --gap-small-s
+- '0.0'
+- --no-partial-scans
+- --out
+- ./gen_schedules/schedule_ORIONA_2026_07_15.txt

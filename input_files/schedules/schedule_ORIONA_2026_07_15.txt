@@ -1,0 +1,7 @@
+#Site           Telescope        Latitude [deg] Longitude [deg]   Elevation [m]
+Cerro-Chajnantor FYST                    -22.986         -67.740          5610.0
+#     Start time UTC        Stop time UTC Rotation Patch name                            Az min   Az max       El  Pass Sub
+ 2026-07-15 11:20:00  2026-07-15 11:29:00     0.00 ORIONA_2026_07_15                      75.86    78.72    41.09     0   0
+ 2026-07-15 11:29:00  2026-07-15 11:38:00     0.00 ORIONA_2026_07_15                      74.49    77.46    43.11     1   0
+ 2026-07-15 11:38:00  2026-07-15 11:47:00     0.00 ORIONA_2026_07_15                      73.05    76.12    45.13     2   0
+ 2026-07-15 11:47:00  2026-07-15 11:56:00     0.00 ORIONA_2026_07_15                      71.50    74.71    47.14     3   0
