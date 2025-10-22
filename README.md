@@ -1,5 +1,7 @@
-# primecam_sims
-## Simulations for PrimeCam large fields: Timestream data and Mapmaking
+# primecam_sims_smallfields
+**If you intend to use these simulations, please get in touch with the corresponding author for further information or collaboration:  
+Ankur Dev (adev@uni-bonn.de)**
+## Simulations for PrimeCam small fields: Timestream data and Mapmaking
 
 Note: High memory usage expected. Run only on a cluster
 
@@ -11,9 +13,12 @@ This file should be put inside `./input_files/`
 ```
 curl -L -o input_files/pysm3_map_nside2048_allStokes.fits "<file_url>"
 ```
+Else, input your own sky maps in the format required by TOAST
 
 ### First let's start with timestream simulation.
+*Much of the documentation here is work in progress*
 
+As an example, our first target field case is **OrionA**. We can choose to either scan the field with Constant Elevation Scans(CES), or choose to vary elevation and have a Lissajous-like scan pattern. Pong and Daisy (SCUBA-2 like patterns) have not been implemented yet in these set of simulations.
 ##### Usage: 
 
 ```
@@ -46,34 +51,8 @@ An example SLURM script is provided that uses ARRAY JOBS to process all schedule
 ### Next: Processing and Map-making pipeline:
 
 ##### Usage:
-The ML mapmaking is a three step process. Remember to remove any previous Context dirs to avoid conflicts.
+*Much of the documentation here is work in progress. A filter and bin map-maker will be implemented here.*
 
-```
-### Build context data
-mpirun -np $NTASKS python write_context_primecam_mpi.py $DATA_PATH
-
-### Build Map Footprint
-mpirun -np $NTASKS python write_footprint_primecam_mpi.py
-
-### Build Map
-mpirun -np $NTASKS python make_ml_map_primecam.py --config $CONFIG_FILE
-```
-
-$DATA_PATH is hierarchical and only the parent directory needs to be provided. Both absolute and relative paths are accepted.
-
-For example, to process all TODs with 200 detectors:
-```
-$DATA_PATH=./ccat_datacenter_mock/data_testmpi/deep56_data_d200/
-```
-Edit the CONFIG_FILE `config.yaml` as required. Output Maximum-Likelihood maps will be stored as defined in CONFIG_FILE. 
-
-#### Config file for ML Mapmaker:
-```
-dump-write: False #Set to True if writing maps at intermediate steps is needed
-maxiter: set to a lower value for quick testing
-```
-
-An example SLURM script is provided to process the ML map-making pipeline. This has been tested with the October 17, 2024 build of sotodlib: https://github.com/simonsobs/sotodlib
 
 ### Converting TOAST HDF5 files to SPT3G format:
 

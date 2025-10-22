@@ -1,5 +1,5 @@
 #!/bin/bash
-export PYTHONPATH=/usr/lib/python3/dist-packages:$PYTHONPATH
+# export PYTHONPATH=/usr/lib/python3/dist-packages:$PYTHONPATH
 export OMP_NUM_THREADS=8
 
 echo "$(which python)"

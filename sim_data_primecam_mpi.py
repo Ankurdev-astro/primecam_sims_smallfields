@@ -32,6 +32,7 @@
 #04-02-2025: Updated gains for atm sim
 #21-09-2025: Updated all dets to correct for NET values
 #21-09-2025: Updated gains for atm sim
+#22-10-2025: Added toggles for atm, inmap and noise simulation
 ###
 
 """
@@ -72,21 +73,25 @@ import time as t
 class Args:
     def __init__(self, parsed_args):   
         self.weather = 'atacama'
+        self.sim_atm = True #True Default
         self.sample_rate = 488 * u.Hz #488 Hz # or 244 Hz
-        self.scan_rate_az = 0.75  * (u.deg / u.s) #on sky rate , or 1 deg/s
+        self.scan_rate_az = 0.5  * (u.deg / u.s) #on sky rate , or 1 deg/s
         #fix_rate_on_sky (bool):  If True, `scan_rate_az` is given in sky coordinates and azimuthal
         #rate on mount will be adjusted to meet it.
         #If False, `scan_rate_az` is used as the mount azimuthal rate. (default = True)
 
-        self.scan_accel_az = 2  * (u.deg / u.s**2) # or 4 deg/s^2
+        self.scan_accel_az = 1  * (u.deg / u.s**2) # or 4 deg/s^2
         self.fov = 1.3 * u.deg # Field-of-view in degrees
         # g3_outdir = "./g3_dataframes"
         self.h5_outdir = os.path.join(
             ".", "ccat_datacenter_mock", 
             "data_testmpi", 
-            f"deep56_data_d{parsed_args.dets}"
+            f"orionA_ATMdata_d{parsed_args.dets}"
         )
 
+        self.sim_noise = True #True Default # Toggle to Simulate Detector Noise
+        
+        self.scan_inmap = True # Toggle to Scan Input Sky Map; Default False
         self.mode = "IQU" #"IQU"
         self.input_map = "pysm3_map_nside2048_allStokes.fits"
         self.nside = 2048 #1024
@@ -147,12 +152,12 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     #=============================#
     ### El Nod Tests ###
 
-    # sim_ground.scan_rate_el = 1.5 * (u.deg / u.s) #rate allowed by mount
-    # sim_ground.el_mod_amplitude = 0.2 * u.deg #1.0
-    # sim_ground.el_mod_rate = 1 * u.Hz #10 sec sinosoid, 0.1
-    # sim_ground.el_mod_sine = True
-
-    # sim_ground.elnod_every_scan = False
+    sim_ground.scan_rate_el = 1.5 * (u.deg / u.s) #rate allowed by mount
+    sim_ground.el_mod_amplitude = 1.0 * u.deg #1.0
+    sim_ground.el_mod_rate = 0.1 * u.Hz #10 sec sinosoid, 0.1
+    sim_ground.el_mod_sine = True
+    sim_ground.elnod_every_scan = False
+    
     #=============================#
 
     sim_ground.apply(data)
@@ -193,16 +198,17 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     ### Input Map Signal
     # hp_input_map = os.path.join("input_files", "pysm3_map_nside2048.fits")
     # Full Stokes
-    hp_input_map = os.path.join("input_files", args.input_map)
-    #check if this file exists, else raise runtime error
-    if not os.path.exists(hp_input_map):
-        raise RuntimeError(f"Input map file not found: {hp_input_map}")
+    if args.scan_inmap:
+        hp_input_map = os.path.join("input_files", args.input_map)
+        #check if this file exists, else raise runtime error
+        if not os.path.exists(hp_input_map):
+            raise RuntimeError(f"Input map file not found: {hp_input_map}")
         
-    scan_map = toast.ops.ScanHealpixMap(file=hp_input_map)
-    scan_map.enabled = True
-    scan_map.pixel_pointing = pixels_radec
-    scan_map.stokes_weights = weights_radec
-    scan_map.apply(data)
+        scan_map = toast.ops.ScanHealpixMap(file=hp_input_map)
+        scan_map.enabled = args.scan_inmap  
+        scan_map.pixel_pointing = pixels_radec
+        scan_map.stokes_weights = weights_radec
+        scan_map.apply(data)
 
     mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
     log.info_rank(f"After Scanning Input Map:  {mem}", world_comm)
@@ -237,7 +243,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     sim_atm_coarse.realization = 1000000 + rand_realisation
     sim_atm_coarse.field_of_view = tel_fov
     sim_atm_coarse.detector_pointing = det_pointing_azel
-    sim_atm_coarse.enabled = True  # Toggle to False to disable
+    sim_atm_coarse.enabled = args.sim_atm   # Toggle to False to disable
     sim_atm_coarse.serial = False
     sim_atm_coarse.apply(data)
     log.info_rank(" Applied large-scale Atmosphere simulation in", comm=world_comm, timer=timer)
@@ -263,7 +269,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     sim_atm_fine.field_of_view = tel_fov
     
     sim_atm_fine.detector_pointing = det_pointing_azel
-    sim_atm_fine.enabled = True  # Toggle to False to disable
+    sim_atm_fine.enabled = args.sim_atm  # Toggle to False to disable
     sim_atm_fine.serial = False
     sim_atm_fine.apply(data)
 
@@ -273,6 +279,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     #simulate detector noise
     sim_noise = toast.ops.SimNoise()
     sim_noise.noise_model = elevation_noise.out_model
+    sim_noise.enabled = args.sim_noise
     sim_noise.serial = False
     sim_noise.apply(data)
 
