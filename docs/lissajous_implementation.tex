@@ -1,0 +1,346 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.65em}
+\renewcommand{\arraystretch}{1.18}
+
+\title{Lissajous Ground-Scan Implementation}
+\author{SimGroundLissajous}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Purpose}
+
+The \texttt{SimGroundLissajous} operator simulates a smooth ground-based
+Lissajous boresight scan for a TOAST observation.  It follows the same broad
+workflow as a ground-scan operator: it reads a ground schedule, creates
+observations, generates timestamps and boresight pointing, converts the
+mount-frame pointing to sky coordinates, and records useful observation
+metadata.
+
+The important design choice is that the scan is generated natively in the
+mount coordinate system: azimuth and elevation.  The equatorial pointing is
+then derived afterward by converting the generated Az/El boresight at each
+timestamp.
+
+\section*{Coordinate Picture}
+
+The scan is first described in horizontal coordinates:
+
+\begin{itemize}[leftmargin=*]
+    \item Azimuth, \(\mathrm{Az}\), is the commanded horizontal mount angle.
+    \item Elevation, \(\mathrm{El}\), is the commanded elevation mount angle.
+    \item RA/Dec are produced later by converting the time-dependent Az/El
+    boresight through the observing site and timestamp.
+\end{itemize}
+
+So the operator is not scanning directly in equatorial coordinates.  It scans
+in Az/El and then asks: ``where on the sky was this mount pointing at this
+time?''
+
+\section*{Schedule Rows and Observations}
+
+Each schedule row supplies a time interval and a nominal mount pointing range:
+
+\begin{center}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.26\linewidth}
+                >{\raggedright\arraybackslash}p{0.60\linewidth}}
+\toprule
+Schedule quantity & Role in the Lissajous scan \\
+\midrule
+Start / stop time & Defines the time span of one generated scan. \\
+\(\mathrm{Az}_{\min}\), \(\mathrm{Az}_{\max}\) & Define the default azimuth center and, optionally, the default azimuth amplitude. \\
+\(\mathrm{El}\) & Defines the default elevation center. \\
+Rotation / boresight angle & Applied as a boresight rotation after the Az/El pointing is generated. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+For each schedule row, the operator creates one Lissajous scan over that row's
+time interval.  With the default zero drift rates, the scan center is fixed in
+mount coordinates during that observation.  The sky moves through that fixed
+mount pattern as Earth rotates.
+
+At the next schedule row, the operator recomputes the center from the new
+scheduled \(\mathrm{Az}_{\min}\), \(\mathrm{Az}_{\max}\), and \(\mathrm{El}\),
+then starts a new Lissajous pattern.
+
+\section*{Core Scan Equations}
+
+For each observation, the operator defines a local elapsed time
+
+\[
+    t = \frac{i}{f_{\mathrm{samp}}},
+\]
+
+where \(i\) is the sample index and \(f_{\mathrm{samp}}\) is the detector sample
+rate.
+
+The azimuth and elevation centers are
+
+\[
+    \mathrm{Az}_{0} =
+    \frac{\mathrm{Az}_{\min} + \mathrm{Az}_{\max}}{2},
+    \qquad
+    \mathrm{El}_{0} = \mathrm{El}_{\mathrm{schedule}}.
+\]
+
+The Lissajous trajectory is then
+
+\[
+    \mathrm{Az}(t) =
+    \mathrm{Az}_{0}
+    + v_{\mathrm{Az,drift}} t
+    + A_{\mathrm{Az}}
+      \sin \left(2\pi f_{\mathrm{Az}} t + \phi_{\mathrm{Az}}\right),
+\]
+
+\[
+    \mathrm{El}(t) =
+    \mathrm{El}_{0}
+    + v_{\mathrm{El,drift}} t
+    + A_{\mathrm{El}}
+      \sin \left(2\pi f_{\mathrm{El}} t + \phi_{\mathrm{El}}\right).
+\]
+
+Here \(A\) is amplitude, \(f\) is oscillation frequency, \(\phi\) is phase, and
+\(v_{\mathrm{drift}}\) is an optional linear drift of the scan center.
+
+\section*{What Zero Drift Means}
+
+By default,
+
+\[
+    v_{\mathrm{Az,drift}} = 0,
+    \qquad
+    v_{\mathrm{El,drift}} = 0.
+\]
+
+This means the Lissajous pattern is fixed around the scheduled Az/El center
+for the duration of one observation.  The telescope mount repeats the same
+mount-frame pattern, while the sky drifts through it.
+
+In plain language:
+
+\begin{quote}
+Within one observation, hold the scheduled mount center and draw a Lissajous
+around it.  At the next schedule row, use the newly scheduled center and draw a
+new Lissajous pattern.
+\end{quote}
+
+This is discrete re-centering between observations, not continuous source
+tracking inside a single observation.
+
+\section*{What Nonzero Drift Does}
+
+The drift terms move the center of the Lissajous pattern linearly during an
+observation.  For example, a positive elevation drift raises the entire pattern
+in elevation as time passes.
+
+These drift rates can be used to approximate tracking, to deliberately sweep a
+larger region, or to move the pattern from one scheduled center toward another.
+They do not automatically compute the source tracking rate, and they do not
+guarantee that the same RA/Dec path is retraced.
+
+A nonzero drift usually makes the mount path an ``open'' Lissajous sweep rather
+than a closed repeating figure centered at one fixed Az/El position.
+
+\section*{Default Amplitudes and Centers}
+
+The azimuth amplitude has a schedule-aware default:
+
+\[
+    A_{\mathrm{Az}} =
+    \frac{\left|\mathrm{Az}_{\max} - \mathrm{Az}_{\min}\right|}{2}
+    \quad \mathrm{if}\quad
+    \texttt{lissajous\_az\_amplitude = None}.
+\]
+
+If \texttt{lissajous\_az\_amplitude} is explicitly set, that value is used
+instead.
+
+The elevation amplitude defaults to the configured trait value.  It is not
+derived from the schedule because the schedule provides a single elevation
+center rather than an elevation min/max range.
+
+\section*{Mount Motion Limit Checks}
+
+The operator checks the requested Lissajous motion against user supplied mount
+motion limits.  These limits are mechanical mount-axis limits, not on-sky scan
+speed limits.
+
+The peak azimuth and elevation mount rates are computed analytically:
+
+\[
+    \left|\dot{\mathrm{Az}}\right|_{\max}
+    =
+    \left|v_{\mathrm{Az,drift}}\right|
+    + 2\pi f_{\mathrm{Az}} \left|A_{\mathrm{Az}}\right|,
+\]
+
+\[
+    \left|\dot{\mathrm{El}}\right|_{\max}
+    =
+    \left|v_{\mathrm{El,drift}}\right|
+    + 2\pi f_{\mathrm{El}} \left|A_{\mathrm{El}}\right|.
+\]
+
+The peak accelerations are
+
+\[
+    \left|\ddot{\mathrm{Az}}\right|_{\max}
+    =
+    \left(2\pi f_{\mathrm{Az}}\right)^2
+    \left|A_{\mathrm{Az}}\right|,
+\]
+
+\[
+    \left|\ddot{\mathrm{El}}\right|_{\max}
+    =
+    \left(2\pi f_{\mathrm{El}}\right)^2
+    \left|A_{\mathrm{El}}\right|.
+\]
+
+These peak values are compared to
+\texttt{max\_mount\_rate\_az}, \texttt{max\_mount\_rate\_el},
+\texttt{max\_mount\_accel\_az}, and \texttt{max\_mount\_accel\_el}.
+
+Because the scan is generated in Az/El, this is a mount-coordinate check:
+
+\[
+    \dot{\mathrm{Az}} \quad \mathrm{and} \quad \dot{\mathrm{El}}.
+\]
+
+It is not an on-sky angular speed check.  A small-angle on-sky speed would look
+approximately like
+
+\[
+    v_{\mathrm{sky}}
+    \simeq
+    \sqrt{
+        \left(\cos(\mathrm{El})\,\dot{\mathrm{Az}}\right)^2
+        +
+        \dot{\mathrm{El}}^2
+    }.
+\]
+
+That \(\cos(\mathrm{El})\) projection is intentionally not applied in the mount
+limit check.
+
+\section*{Main User-Facing Traits}
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}p{0.35\linewidth}
+                >{\raggedright\arraybackslash}p{0.52\linewidth}}
+\toprule
+Trait & Meaning \\
+\midrule
+lissajous\_az\_amplitude & Azimuth oscillation amplitude.  If \texttt{None}, use half the scheduled azimuth throw. \\
+lissajous\_el\_amplitude & Elevation oscillation amplitude. \\
+lissajous\_az\_rate & Azimuth oscillation frequency. \\
+lissajous\_el\_rate & Elevation oscillation frequency. \\
+lissajous\_az\_phase & Azimuth sinusoid phase offset. \\
+lissajous\_el\_phase & Elevation sinusoid phase offset. \\
+lissajous\_az\_drift\_rate & Linear drift rate of the azimuth scan center. \\
+lissajous\_el\_drift\_rate & Linear drift rate of the elevation scan center. \\
+check\_mount\_motion\_limits & Enable or disable mount rate and acceleration checks. \\
+max\_mount\_rate\_az & Maximum allowed azimuth mount rate. \\
+max\_mount\_rate\_el & Maximum allowed elevation mount rate. \\
+max\_mount\_accel\_az & Maximum allowed azimuth mount acceleration. \\
+max\_mount\_accel\_el & Maximum allowed elevation mount acceleration. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Operational Traits}
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}p{0.35\linewidth}
+                >{\raggedright\arraybackslash}p{0.52\linewidth}}
+\toprule
+Trait & Meaning \\
+\midrule
+telescope & Telescope object with focalplane and site information. \\
+telescope\_file & Optional instrument file used when a telescope object is not supplied. \\
+schedule & GroundSchedule object used to define observation rows. \\
+schedule\_file & Optional schedule file used when a schedule object is not supplied. \\
+sort\_schedule\_file & Sort a loaded schedule by mean boresight RA. \\
+weather & Built-in weather site name or weather HDF5 file. \\
+realization & Weather realization index. \\
+max\_pwv & Optional maximum PWV for simulated weather. \\
+median\_weather & Use median weather parameters instead of sampling distributions. \\
+use\_ephem & Use PyEphem for Az/El to RA/Dec conversion. \\
+use\_qpoint & Use qpoint for Az/El to RA/Dec conversion. \\
+distribute\_time & Distribute observations along time rather than detector axis. \\
+sample\_set\_size & Samples per sample-set when distributing in time. \\
+detset\_key & Focalplane column used to group detectors into detector sets. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Produced Data}
+
+For each observation, the operator writes shared data columns for:
+
+\begin{itemize}[leftmargin=*]
+    \item timestamps,
+    \item azimuth,
+    \item elevation,
+    \item boresight quaternion in Az/El,
+    \item boresight quaternion in RA/Dec,
+    \item observatory position,
+    \item observatory velocity,
+    \item optional shared flags.
+\end{itemize}
+
+It also records scan metadata such as the realized minimum and maximum Az/El
+values and marks the scan type as \texttt{lissajous}.
+
+\section*{What This Implementation Does Not Do}
+
+\begin{itemize}[leftmargin=*]
+    \item It does not continuously solve for source tracking inside each
+    observation.
+    \item It does not automatically compute drift rates from a target's
+    apparent Az/El motion.
+    \item It does not check absolute mechanical pointing bounds such as
+    \(\mathrm{Az}_{\min}^{\mathrm{mount}}\) or
+    \(\mathrm{El}_{\min}^{\mathrm{mount}}\).
+    \item It does not check total on-sky angular speed.
+    \item It does not generate physical turnaround periods.  For compatibility
+    with TOAST operators that expect the standard key, it creates an empty
+    \texttt{turnaround} interval list.
+\end{itemize}
+
+\section*{Practical Mental Model}
+
+The simplest way to understand the current implementation is:
+
+\begin{quote}
+The schedule tells the telescope where to place the center of each pass in
+Az/El.  The Lissajous traits tell it how to wiggle around that center.  With
+zero drift, the sky passes through that mount-fixed pattern.  At the next
+schedule row, the pattern is re-centered and the process repeats.
+\end{quote}
+
+This makes the operator useful for simulating compact, smooth, repeated
+mount-frame patterns while still producing the RA/Dec pointing needed by later
+mapmaking and sky-projection steps.
+
+\end{document}

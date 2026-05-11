@@ -23,3 +23,10 @@ make_ml_map_latest_sotodlib.py
 input_files/fp_files
 
 !input_files/fp_files/fp_f280_dettable.h5
+.vscode*
+aux/params.yaml
+aux/gen_schedules
+
+docs/*
+!docs/lissajous_implementation.tex
+!docs/lissajous_implementation.pdf

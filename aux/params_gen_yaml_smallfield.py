@@ -3,6 +3,7 @@ import yaml
 import subprocess
 
 #python params_gen_yaml_smallfield.py '2026-07-15 00:00:00' '2026-07-16 23:00:00' 'OrionA'
+#python params_gen_yaml_smallfield.py '2026-07-15 11:00:00' '2026-07-15 12:00:00' 'OrionA'
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description="Generate YAML configuration file for Small Field Scans",

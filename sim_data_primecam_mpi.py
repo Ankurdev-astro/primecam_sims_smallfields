@@ -33,6 +33,7 @@
 #21-09-2025: Updated all dets to correct for NET values
 #21-09-2025: Updated gains for atm sim
 #22-10-2025: Added toggles for atm, inmap and noise simulation
+#11-05-2026: Updated script for new SimGroundLissajous class
 ###
 
 """
@@ -55,12 +56,10 @@ import toast
 import toast.io as io
 import toast.ops
 from toast.mpi import MPI
-# from toast.instrument_coords import quat_to_xieta
 from scripts.helper_scripts.calc_groupsize import job_group_size, estimate_group_size
 
 import astropy.units as u
 from astropy.table import QTable, Column
-import pickle as pkl
 
 import numpy as np
 from datetime import datetime
@@ -68,26 +67,23 @@ import os
 import argparse
 import random
 import time as t
+from sim_ground_lissajous import SimGroundLissajous
 
 # Define the global args class
 class Args:
     def __init__(self, parsed_args):   
-        self.scan_inmap = True # Toggle to Scan Input Sky Map; Default False
-        self.sim_atm = True #True Default
+        self.scan_inmap = True #True Default # Toggle to Scan Input Sky Map
+        self.sim_atm = True #True Default # Toggle to Simulate Atmosphere
         self.sim_noise = True #True Default # Toggle to Simulate Detector Noise
         self.weather = 'atacama'
         self.sample_rate = 488 * u.Hz #488 Hz # or 244 Hz
-        self.scan_rate_az = 0.5  * (u.deg / u.s) #on sky rate , or 1 deg/s
-        #fix_rate_on_sky (bool):  If True, `scan_rate_az` is given in sky coordinates and azimuthal
-        #rate on mount will be adjusted to meet it.
-        #If False, `scan_rate_az` is used as the mount azimuthal rate. (default = True)
+        # self.max_mount_rate_az = 0.5  * (u.deg / u.s) # Maximum AZ mount rate
 
-        self.scan_accel_az = 1  * (u.deg / u.s**2) # or 4 deg/s^2
+        # self.max_mount_accel_az = 1  * (u.deg / u.s**2) # Maximum AZ mount acceleration
         self.fov = 1.3 * u.deg # Field-of-view in degrees
-        # g3_outdir = "./g3_dataframes"
         self.h5_outdir = os.path.join(
             ".", "ccat_datacenter_mock", 
-            "mockdata", 
+            "mockdata_test1", 
             f"orionA_ATMdata_d{parsed_args.dets}"
         )
         
@@ -139,27 +135,33 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     # Create the (initially empty) data
     data = toast.Data(comm=toast_comm)
 
-    #Load SimGround
+    #=============================# 
+    #Load SimGround Lissajous [tests]
+    # Currently we don't flag any turnarounds
+    # Also, don't create anu turnaround intervals
 
-    sim_ground = toast.ops.SimGround(weather=args.weather)
+    sim_ground = SimGroundLissajous(weather=args.weather)
     sim_ground.telescope = telescope
     sim_ground.schedule = schedule
-    sim_ground.scan_rate_az =  args.scan_rate_az
-    sim_ground.scan_accel_az = args.scan_accel_az
     sim_ground.max_pwv = 1.41 *u.mm
-    
-    #=============================#
-    ### El Nod Tests ###
 
-    sim_ground.scan_rate_el = 1.5 * (u.deg / u.s) #rate allowed by mount
-    sim_ground.el_mod_amplitude = 1.0 * u.deg #1.0
-    sim_ground.el_mod_rate = 0.1 * u.Hz #10 sec sinosoid, 0.1
-    sim_ground.el_mod_sine = True
-    sim_ground.elnod_every_scan = False
-    
-    #=============================#
+    sim_ground.max_mount_rate_az = 3.0 * (u.deg / u.s)
+    sim_ground.max_mount_accel_az = 6.0 * (u.deg / u.s**2)
+    sim_ground.max_mount_rate_el = 1.5 * (u.deg / u.s)
+    sim_ground.max_mount_accel_el = 1.5 * (u.deg / u.s**2)
+
+    # Lissajous parameters
+    sim_ground.lissajous_az_amplitude = 2.0 * u.deg
+    sim_ground.lissajous_el_amplitude = 1.0 * u.deg
+
+    sim_ground.lissajous_az_rate = 0.05 * u.Hz
+    sim_ground.lissajous_el_rate = 0.071 * u.Hz
+
+    sim_ground.lissajous_az_phase = 0.0 * u.deg
+    sim_ground.lissajous_el_phase = 90.0 * u.deg
 
     sim_ground.apply(data)
+    #=============================# 
     
     log.info_rank(f"Number of Observations loaded: {len(data.obs)}", world_comm)
 
@@ -203,17 +205,23 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
         if not os.path.exists(hp_input_map):
             raise RuntimeError(f"Input map file not found: {hp_input_map}")
         
+        log.info_rank(f"Scanning input map: {hp_input_map} ...", world_comm)
         scan_map = toast.ops.ScanHealpixMap(file=hp_input_map)
         scan_map.enabled = args.scan_inmap  
         scan_map.pixel_pointing = pixels_radec
         scan_map.stokes_weights = weights_radec
         scan_map.apply(data)
+    else:
+        log.info_rank(f"No input map scanning...", world_comm)
 
     mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
     log.info_rank(f"After Scanning Input Map:  {mem}", world_comm)
 
     ### Atmospheric simulation
-    log.info_rank(f"Atmospheric simulation...", world_comm)
+    if args.sim_atm:
+        log.info_rank(f"Atmospheric simulation...", world_comm)
+    else:
+        log.info_rank(f"No atmospheric simulation...", world_comm)
     #Atmosphere set-up
     rand_realisation = random.randint(10000, 99999)
     tel_fov = 1.5* u.deg # 4* u.deg , changed 17.02.2025
@@ -245,7 +253,8 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     sim_atm_coarse.enabled = args.sim_atm   # Toggle to False to disable
     sim_atm_coarse.serial = False
     sim_atm_coarse.apply(data)
-    log.info_rank(" Applied large-scale Atmosphere simulation in", comm=world_comm, timer=timer)
+    if args.sim_atm: 
+        log.info_rank(" Applied large-scale Atmosphere simulation in", comm=world_comm, timer=timer)
 
     sim_atm_fine= toast.ops.SimAtmosphere(
             name="sim_atm_fine",
@@ -272,10 +281,15 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     sim_atm_fine.serial = False
     sim_atm_fine.apply(data)
 
-    log.info_rank("Applied small-scale Atmosphere simulation in", comm=world_comm, timer=timer)
+    if args.sim_atm:
+        log.info_rank("Applied small-scale Atmosphere simulation in", comm=world_comm, timer=timer)
     #------------------------#
     
     #simulate detector noise
+    if args.sim_noise:
+        log.info_rank(f"Simulating detector noise...", world_comm)
+    else:
+        log.info_rank(f"No detector noise simulation...", world_comm) 
     sim_noise = toast.ops.SimNoise()
     sim_noise.noise_model = elevation_noise.out_model
     sim_noise.enabled = args.sim_noise

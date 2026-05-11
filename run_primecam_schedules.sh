@@ -56,7 +56,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Simulation info from user
-echo "Running with 488 Hz sampling rate, scanning CES 0.75 deg/s, 2 deg/s^2 acc"
+echo "Running with 488 Hz sampling rate, scanning with Lissajous pattern, and using $NDETS detectors."
 
 # Loop through the specified range of schedule files
 for ((i=START_IDX; i<STOP_IDX; i++))

@@ -215,7 +215,7 @@ def main():
     binner_final = toast.ops.BinMap(name="binner_final", pixel_dist="pix_dist_final")
     binner_final.enabled = True
     ### Default: shared_mask_nonscience is flagged
-    # binner_final.shared_flag_mask = 0 #No flags masked; include all data and turnarounds
+    binner_final.shared_flag_mask = 0 #No flags masked; include all data and turnarounds
     binner_final.pixel_pointing = pixels_wcs_radec
     binner_final.stokes_weights = weights_radec
 
