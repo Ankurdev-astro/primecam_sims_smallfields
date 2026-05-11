@@ -26,7 +26,7 @@
 
 #SBATCH --mem=100G           # max mem requested, per node, baseline 400G
 ### Maximum requested time (days-hrs:min:sec)
-#SBATCH --time 0-00:30:00
+#SBATCH --time 0-00:10:00
 
 #SBATCH --output ./logs_map/%j.%x.out   # stdout file (overwrite)
 #SBATCH --error ./logs_map/%j.%x.err     # stdout file (overwrite)
@@ -74,14 +74,16 @@ echo ""
 ### section 4 - Set Job parameters
 ### Set TOD data dir
 INDIR='orionA_ATMdata_d100'
-OUTDIR='fb_dump1'
+OUTDIR='fb_orionA'
 
 PARENT_DIR="ccat_datacenter_mock"
 DATA_DIR="mockdata"
+MAP_DIR="fb_maps"
 FULL_DATA_PATH="${PARENT_DIR}/${DATA_DIR}"
+FULL_MAP_PATH="${PARENT_DIR}/${MAP_DIR}"
 
 FULL_INDIR="${FULL_DATA_PATH}/${INDIR}"
-FULL_OUTDIR="${PARENT_DIR}/${OUTDIR}"
+FULL_OUTDIR="${FULL_MAP_PATH}/${OUTDIR}"
 GRP_SIZE=2 #24
 NOTES=''
 ###################

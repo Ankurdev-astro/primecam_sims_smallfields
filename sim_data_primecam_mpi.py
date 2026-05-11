@@ -83,7 +83,7 @@ class Args:
         self.fov = 1.3 * u.deg # Field-of-view in degrees
         self.h5_outdir = os.path.join(
             ".", "ccat_datacenter_mock", 
-            "mockdata_test1", 
+            "mockdata", 
             f"orionA_ATMdata_d{parsed_args.dets}"
         )
         

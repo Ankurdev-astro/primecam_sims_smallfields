@@ -47,7 +47,6 @@ module load lang/Miniconda3/23.9.0-0
 module load lib/mpi4py/3.1.5-gompi-2023b
 ### initiate conda
 conda deactivate
-# conda activate mlmap
 conda activate toast3
 echo "*************"
 
