@@ -10,7 +10,7 @@ def select_wafer(dettable, wafer_slot):
     return dettable[dettable['wafer_slot'] == wafer_slot]
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Select detectors from the w2 wafer.")
+    parser = argparse.ArgumentParser(description="Select detectors from a module's w2 wafer.")
     parser.add_argument(
         "ndets_selected", 
         type=int, 
@@ -19,7 +19,13 @@ def parse_arguments():
     parser.add_argument(
         "--tube-offset",
         action="store_true",
-        help="Apply the PrimeCam f280 module-to-boresight offset before trimming."
+        help="Apply the selected module's module-to-boresight offset before trimming."
+    )
+    parser.add_argument(
+        "-m",
+        "--module-name",
+        required=True,
+        help="PrimeCam module name from the primecam-focalplane configuration.",
     )
     parser.add_argument(
         "--file-path",
@@ -47,6 +53,7 @@ def generate_trimmed_table(trim_dettable_w2, ndets_selected):
 
 def prepare_trimmed_table(
     ndets_selected,
+    module_name,
     tube_offset=False,
     file_path=None,
 ):
@@ -54,11 +61,13 @@ def prepare_trimmed_table(
 
     By default, load the table bundled with primecam-focalplane. An explicit
     file_path overrides that source, with or without tube_offset enabled.
+    module_name selects the configured module used to load the default table and
+    to apply the optional module-to-boresight offset.
     """
     module = None
     if file_path is None or tube_offset:
         from primecam_focalplane.module_to_boresight import ModuleToBoresightOffset
-        module = ModuleToBoresightOffset("primecam_f280")
+        module = ModuleToBoresightOffset(module_name)
 
     dettable_full = module.load() if file_path is None else read_full_table(file_path)
     if tube_offset:
@@ -72,7 +81,10 @@ def prepare_trimmed_table(
 def main():
     args = parse_arguments()
     table = prepare_trimmed_table(
-        args.ndets_selected, tube_offset=args.tube_offset, file_path=args.file_path,
+        args.ndets_selected,
+        tube_offset=args.tube_offset,
+        file_path=args.file_path,
+        module_name=args.module_name,
     )
     print(f"Number of selected detectors: {len(table)}")
     return table

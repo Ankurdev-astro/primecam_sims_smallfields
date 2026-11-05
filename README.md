@@ -14,7 +14,7 @@ when simulating many detectors and atmospheric timestreams.
 ## Main Workflow
 
 1. Prepare the input sky map, schedule files, and focal-plane files.
-2. Run `ramses_array_sim.slurm` to simulate timestream data for each schedule.
+2. Run `ramses_mockdata_sim.slurm` to simulate timestream data for each schedule.
 3. Run `ramses_fbmap.slurm` to load the HDF5 observations, filter the TOD, and
    write map products.
 4. Optionally convert TOAST HDF5 observations to SPT3G `.g3` files.
@@ -23,7 +23,7 @@ The main scripts are:
 
 - `sim_data_primecam_mpi.py`: MPI timestream simulation driver.
 - `write_toast_maps.py`: TOAST filter-and-bin mapmaker.
-- `ramses_array_sim.slurm`: Ramses SLURM array job for simulations.
+- `ramses_mockdata_sim.slurm`: Ramses SLURM array job for simulations.
 - `ramses_fbmap.slurm`: Ramses SLURM job for mapmaking.
 - `scripts/fp_scripts/fp_prepare.py`: returns prepared detector-subset QTables in memory.
 - `scripts/helper_scripts/toast_h5_g3.py`: converts TOAST HDF5 observations to
@@ -77,9 +77,11 @@ name, not the full path.
 
 ### Focal Plane
 
-The simulation uses the f280 detector table bundled with `primecam-focalplane`
-and selects detectors from wafer `w2`. No local detector file is needed.
+The module name is required. It selects a detector table bundled with
+`primecam-focalplane`; detectors are then selected from wafer `w2`. No local
+detector file is needed.
 
+- Set `--module-name <MODULE_NAME>` (for example, `primecam_f280`).
 - Set `-d <NUM_DETS>` to an even number from 10 up to the wafer's detector count.
 - Add `--tube-offset` to apply the module-to-boresight offset, or set
   `TUBE_OFFSET=TRUE` for Slurm runs.
@@ -101,7 +103,8 @@ Basic direct usage:
 export OMP_NUM_THREADS=<NUM_THREADS>
 mpirun -np <N_PROCS> python sim_data_primecam_mpi.py \
   --sch <SCHEDULE_FILE> \
-  --dets <NUM_DETS>
+  --dets <NUM_DETS> \
+  --module-name <MODULE_NAME>
 ```
 
 For help:
@@ -114,7 +117,7 @@ The code creates the data-center mock directory automatically. Current output
 paths are of the form:
 
 ```text
-ccat_datacenter_mock/mockdata/orionA_ATMdata_d<NUM_DETS>/sim_PCAM280 GHz_h5_<FIELD>_d<NUM_DETS>/
+<PARENT_DIR>/<DATA_DIR>/<RUN_NAME>_d<NUM_DETS>_<MODULE_NAME>/<SIM_OUTPUT_DIR>/
 ```
 
 Each observation is written as TOAST HDF5 with detector `signal` and `flags`
@@ -125,13 +128,14 @@ datasets.
 Use:
 
 ```bash
-sbatch ramses_array_sim.slurm
+sbatch ramses_mockdata_sim.slurm
 ```
 
-Before submitting, check Section 4 of `ramses_array_sim.slurm`:
+Before submitting, check Section 4 of `ramses_mockdata_sim.slurm`:
 
 ```bash
 ndets=100
+MODULE_NAME=primecam_f280
 ```
 
 The script:
@@ -185,10 +189,10 @@ Direct usage:
 ```bash
 export OMP_NUM_THREADS=<NUM_THREADS>
 mpirun -np <N_PROCS> python write_toast_maps.py \
-  --input_dir ccat_datacenter_mock/mockdata/orionA_ATMdata_d100 \
-  --output_dir ccat_datacenter_mock/fb_dump1 \
-  --grp_size 2 \
-  --note_msg "optional notes"
+  --input_dir <INPUT_DIR> \
+  --output_dir <OUTPUT_DIR> \
+  --grp_size <GROUP_SIZE> \
+  --note_msg "<NOTES>"
 ```
 
 For help:
@@ -208,19 +212,19 @@ sbatch ramses_fbmap.slurm
 Before submitting, check Section 4 of `ramses_fbmap.slurm`:
 
 ```bash
-INDIR='orionA_ATMdata_d100'
-OUTDIR='fb_dump1'
-PARENT_DIR="ccat_datacenter_mock"
-DATA_DIR="mockdata"
-GRP_SIZE=2
-NOTES=''
+INDIR='<INPUT_DIR_NAME>'
+OUTDIR='<OUTPUT_DIR_NAME>'
+PARENT_DIR='<PARENT_DIR>'
+DATA_DIR='<DATA_DIR>'
+GRP_SIZE=<GROUP_SIZE>
+NOTES='<NOTES>'
 ```
 
-With these defaults, the input and output paths become:
+With these settings, the input and output paths become:
 
 ```text
-ccat_datacenter_mock/mockdata/orionA_ATMdata_d100
-ccat_datacenter_mock/fb_dump1
+<PARENT_DIR>/<DATA_DIR>/<INPUT_DIR_NAME>
+<PARENT_DIR>/<OUTPUT_DIR_NAME>
 ```
 
 The script creates `logs_map/`, loads the same Ramses modules and `toast3`
@@ -236,11 +240,11 @@ observation directory into SPT3G `.g3` files, use:
 python scripts/helper_scripts/toast_h5_g3.py <H5_DIR>
 ```
 
-Example:
+Generic path example:
 
 ```bash
 python scripts/helper_scripts/toast_h5_g3.py \
-  ccat_datacenter_mock/mockdata/orionA_ATMdata_d100/sim_PCAM280\ GHz_h5_orionA_d100
+  <PARENT_DIR>/<DATA_DIR>/<INPUT_DIR_NAME>/<H5_OUTPUT_DIR>
 ```
 
 The converter takes a directory containing `.h5` files and creates a sibling

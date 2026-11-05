@@ -10,7 +10,7 @@
 
 ### This script runs through all the schedule files
 ### launching SLURM ARRAY jobs for each schedule independently
-### NOTE: ndets parameter must be set in Section 4
+### NOTE: Set simulation parameters in Section 4
 
 ### section 1 - SLURM params
 
@@ -77,6 +77,8 @@ echo ""
 ### section 4 - Set Job parameters
 ### Set number of detectors
 ndets=100
+### PrimeCam module name from the primecam-focalplane configuration
+MODULE_NAME=primecam_f280
 ### Apply the PrimeCam module-to-boresight offset before detector trimming
 TUBE_OFFSET=True
 
@@ -98,11 +100,12 @@ echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "Job UID: $JOB_UID"
 echo "Running schedule file: $schedule_file"
 echo "Number of dets: $ndets"
+echo "PrimeCam module: $MODULE_NAME"
 echo "Apply tube offset: $TUBE_OFFSET"
 echo ""
 
 ### Prepare the focalplane inside the simulation, without intermediate files.
-sim_args=(-s "$schedule_file" -d "$ndets")
+sim_args=(-s "$schedule_file" -d "$ndets" --module-name "$MODULE_NAME")
 TUBE_OFFSET="${TUBE_OFFSET^^}"
 if [ "$TUBE_OFFSET" = "TRUE" ]; then
     sim_args+=(--tube-offset)

@@ -90,7 +90,7 @@ class Args:
         self.h5_outdir = os.path.join(
             ".", "ccat_datacenter_mock",
             "mockdata",
-            f"orionA_ATMdata_d{parsed_args.dets}"
+            f"orionA_ATMdata_d{parsed_args.dets}_{parsed_args.module_name}"
         )
 
         self.mode = "IQU" #"IQU"
@@ -350,6 +350,8 @@ def main():
                         help="Number of detectors")
     parser.add_argument('--tube-offset', action="store_true",
                         help="Apply the module-to-boresight offset before trimming")
+    parser.add_argument('-m', '--module-name', required=True,
+                        help="PrimeCam module name to use")
     parser.add_argument('-g','--grp_size', default=None, type=int, help="Group size (optional)")
 
     parsed_args = parser.parse_args()
@@ -397,13 +399,16 @@ def main():
     det_table = None
     if rank == 0:
         det_table = prepare_trimmed_table(
-            parsed_args.dets, tube_offset=parsed_args.tube_offset,
+            parsed_args.dets,
+            parsed_args.module_name,
+            tube_offset=parsed_args.tube_offset,
         )
     if comm is not None:
         det_table = comm.bcast(det_table, root=0)
 
     log_global.info_rank(
-        f"Prepared focalplane with {len(det_table)} detectors", comm)
+        f"Prepared {parsed_args.module_name} focalplane with "
+        f"{len(det_table)} detectors", comm)
 
     # instantiate a TOAST focalplane instance
     width = args.fov
