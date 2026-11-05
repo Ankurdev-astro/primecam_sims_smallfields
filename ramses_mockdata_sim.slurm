@@ -3,7 +3,7 @@
 ################################################
 ###     SLURM script for primecam_sims      ####
 ###      ARRAY JOB runs all schedules       ####
-###					                        ####
+###                                         ####
 ###     Tested on Uni Koeln Ramses Cluster  ####
 ###             v1.0 , 08.05.2026           ####
 ################################################
@@ -17,11 +17,11 @@
 #SBATCH --partition=smp
 #SBATCH --account=ag-riechers # For Ramses/ CCAT
 
-#SBATCH --ntasks-per-node 12 # 24 # tasks per node ; num of processes per node
+#SBATCH --ntasks-per-node 12 #24 # tasks per node ; num of processes per node
 #SBATCH --cpus-per-task 4 #8 # number of cores per task ; threads per process
 
 #SBATCH --nodes 1  # number of nodes
-#SBATCH --array=0 #0-23  # Define the array size, 24 schs
+#SBATCH --array=0 # Define the array size [=num. sch. files - 1]
 
 #SBATCH --job-name=det100_n12c4_sim 
 ### Job name, det#ndets_#ntaskstotal_#corespertask_sim
@@ -77,6 +77,8 @@ echo ""
 ### section 4 - Set Job parameters
 ### Set number of detectors
 ndets=100
+### Apply the PrimeCam module-to-boresight offset before detector trimming
+TUBE_OFFSET=True
 
 ### section 5 - Job Run
 echo "***** EXEC SCRIPT *****"
@@ -88,30 +90,29 @@ echo ""
 schedule_files_list=($(basename -a input_files/schedules/*.txt))
 ### Select schedule based on array index
 schedule_file=${schedule_files_list[$SLURM_ARRAY_TASK_ID]}
+JOB_UID="${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 echo ""
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
+echo "Job UID: $JOB_UID"
 echo "Running schedule file: $schedule_file"
 echo "Number of dets: $ndets"
+echo "Apply tube offset: $TUBE_OFFSET"
 echo ""
 
-### Making detector files
-## Check if the current array task ID is not 1
-if [ "$SLURM_ARRAY_TASK_ID" -ne 0 ]; then
-    sleep 5
-fi
-## Run the fp_trim script with the specified number of detectors (ndets)
-python -m scripts.fp_scripts.fp_trim $ndets
-## Check if the fp_trim script executed successfully
-if [ $? -ne 0 ]; then
-    # If there was an error, print an error message and exit the script
-    echo "Error occurred in FP file generation script. Exiting."
+### Prepare the focalplane inside the simulation, without intermediate files.
+sim_args=(-s "$schedule_file" -d "$ndets")
+TUBE_OFFSET="${TUBE_OFFSET^^}"
+if [ "$TUBE_OFFSET" = "TRUE" ]; then
+    sim_args+=(--tube-offset)
+elif [ "$TUBE_OFFSET" != "FALSE" ]; then
+    echo "TUBE_OFFSET must be TRUE or FALSE. Got: $TUBE_OFFSET" >&2
     exit 1
 fi
 
 ### Simulating timestream data from schedules
-mpirun -np $SLURM_NTASKS python3 sim_data_primecam_mpi.py -s $schedule_file -d $ndets
+mpirun -np $SLURM_NTASKS python3 sim_data_primecam_mpi.py "${sim_args[@]}" || exit $?
 
 echo ""
 echo "******** DONE *********"

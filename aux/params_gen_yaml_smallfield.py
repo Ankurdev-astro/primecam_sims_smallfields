@@ -3,6 +3,7 @@ import yaml
 import subprocess
 
 #python params_gen_yaml_smallfield.py '2026-07-15 00:00:00' '2026-07-16 23:00:00' 'OrionA'
+#python params_gen_yaml_smallfield.py '2026-07-15 11:00:00' '2026-07-15 12:00:00' 'OrionA'
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description="Generate YAML configuration file for Small Field Scans",
@@ -25,6 +26,7 @@ out_yaml = f"schedule_{patch_name}.txt"
 
 #patch = HorizontalPatch(name,HORIZONTAL, weight, azmin, azmax, el, scantime)
 #Rectangle :name, weight, RA_MIN, DEC_MAX, RA_MAX, DEC_MIN
+#"--patch", f"{patch_name},1,85,-5,4.0",
 
 #For Small Field centre and width scans format
 #"--patch", f"{patch_name},1,+150.119,+2.205,2.5"
@@ -38,7 +40,7 @@ config_items = \
 "--patch-coord", "C",
 "--start", args.start,
 "--stop", args.stop,
-"--patch", f"{patch_name},1,84,-6,2.0",
+"--patch", f"{patch_name},1,83,-4,84,-7",
 "--el-min-deg", "40",
 "--el-max-deg", "65",
 "--sun-avoidance-angle-deg", "35",

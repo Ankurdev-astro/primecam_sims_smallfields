@@ -3,7 +3,7 @@ umask 0002
 mkdir -p logs
 chmod g+rws logs
 
-SBATCH_SCRIPT="ramses_array_sim.slurm"
+SBATCH_SCRIPT="ramses_mockdata_sim.slurm"
 ###SBATCH_SCRIPT="ramses_fbmap.slurm"
 
 # Submit the Slurm job and capture the job ID

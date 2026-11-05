@@ -1,16 +1,15 @@
 ###
-#Timestream Simulation Script for Prime-cam
+#Timestream Simulation Script for Prime-cam Small Fields
 ###
-###Last updated: Feb 04, 2025
+###Last updated: Oct 29, 2026
 ###
-#Author: Ankur Dev, adev@astro.uni-bonn-de
+#Author: Ankur Dev, ankurdev@cornell.edu
 ###
 ###Logbook###
 ###
 ###Personal Notes and Updates:
 #ToDo: Implement config and CLI
 #ToDo: Implement CAR
-#ToDo: Verify and validate sequential steps
 ###
 ###[Self]Updates Log:
 #20-02-2024: Scraping TOAST2, Begin migration
@@ -33,6 +32,7 @@
 #21-09-2025: Updated all dets to correct for NET values
 #21-09-2025: Updated gains for atm sim
 #22-10-2025: Added toggles for atm, inmap and noise simulation
+#29-10-2026: fp_prepare.py now directly called by sim_data_primecam_mpi.py and applies offsets and trims
 ###
 
 """
@@ -42,7 +42,7 @@ This script is modified from TOAST Ground Simulation to perform timestream simul
 for Prime-Cam with FYST. Note: this is a work in progress.
 
 The script demonstrates an example workflow, from generating loading detectors, scanning
-an input map, making detailed atmospheric simulation and generating mock detector timestreams. 
+an input map, making detailed atmospheric simulation and generating mock detector timestreams.
 for more complex simulations tailored to specific experimental needs.
 
 Usage:
@@ -59,24 +59,26 @@ from toast.mpi import MPI
 from scripts.helper_scripts.calc_groupsize import job_group_size, estimate_group_size
 
 import astropy.units as u
-from astropy.table import QTable, Column
+from scripts.fp_scripts.fp_prepare import prepare_trimmed_table
 import pickle as pkl
 
 import numpy as np
 from datetime import datetime
 import os
+import shutil
 import argparse
 import random
 import time as t
 
 # Define the global args class
 class Args:
-    def __init__(self, parsed_args):   
+    def __init__(self, parsed_args):
+        self.overwrite_sim = True # Toggle to overwrite existing simulation output; Default True
         self.scan_inmap = True # Toggle to Scan Input Sky Map; Default False
-        self.sim_atm = True #True Default
+        self.sim_atm = False #True Default
         self.sim_noise = True #True Default # Toggle to Simulate Detector Noise
         self.weather = 'atacama'
-        self.sample_rate = 488 * u.Hz #488 Hz # or 244 Hz
+        self.sample_rate = 488 * u.Hz #488 Hz
         self.scan_rate_az = 0.5  * (u.deg / u.s) #on sky rate , or 1 deg/s
         #fix_rate_on_sky (bool):  If True, `scan_rate_az` is given in sky coordinates and azimuthal
         #rate on mount will be adjusted to meet it.
@@ -86,11 +88,11 @@ class Args:
         self.fov = 1.3 * u.deg # Field-of-view in degrees
         # g3_outdir = "./g3_dataframes"
         self.h5_outdir = os.path.join(
-            ".", "ccat_datacenter_mock", 
-            "mockdata", 
+            ".", "ccat_datacenter_mock",
+            "mockdata",
             f"orionA_ATMdata_d{parsed_args.dets}"
         )
-        
+
         self.mode = "IQU" #"IQU"
         self.input_map = "pysm3_map_nside2048_allStokes.fits"
         self.nside = 2048 #1024
@@ -98,12 +100,54 @@ class Args:
         self.fwhm = 0.78 *u.arcmin
 
 
+def _save_sim_data(args, data, telescope, world_comm):
+    """Prepare the output directory on rank 0 and save each local observation."""
+    log = toast.utils.Logger.get()
+    field_name = data.obs[0].name.split('-')[0]
+    n_dets = telescope.focalplane.n_detectors
+
+    module_code = args.freq.to_string().split('.0')[0]
+    f_path = f"sim_PCAM{module_code}_h5_{field_name}_d{n_dets}"
+    save_dir = os.path.join(args.h5_outdir, f_path)
+    # Rank 0 prepares the directory before any rank writes observations.
+    output_error = None
+    if data.comm.world_rank == 0:
+        try:
+            if os.path.exists(save_dir):
+                if not args.overwrite_sim:
+                    raise RuntimeError(f"Output directory already exists: {save_dir}")
+                shutil.rmtree(save_dir)
+            os.makedirs(save_dir)
+        except Exception as exc:
+            output_error = f"Could not prepare output directory {save_dir}: {exc}"
+    if world_comm is not None:
+        output_error = world_comm.bcast(output_error, root=0)
+    if output_error is not None:
+        raise RuntimeError(output_error)
+
+    log.info_rank(
+        f"Writing timestream data to h5 files for field {field_name} "
+        f"observed at {args.freq.to_string()} with {n_dets} detectors",
+        world_comm,
+    )
+    log.info_rank(f"Writing h5 files to: {save_dir}", world_comm)
+
+    detdata_tosave = ["signal", "flags"]
+
+    for obs in data.obs:
+        io.save_hdf5(
+            obs=obs,
+            dir=save_dir,
+            detdata=detdata_tosave
+        )
+
+
 def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     #Set up logger and timer
     log = toast.utils.Logger.get()
     timer = toast.timing.Timer()
     timer.start()
-    
+
     if group_size is not None:
         # Create the toast communicator with specified group size
         toast_comm = toast.Comm(world=comm, groupsize=group_size)
@@ -118,7 +162,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
         toast_comm = toast.Comm(world=comm, groupsize=grp_size_calc)
         log.info_rank(f"Job group size: {toast_comm.group_size}", comm)
         log.info_rank(f"Number of process groups: {toast_comm.ngroups}", comm)
-    
+
     # Shortcut for the world communicator
     world_comm = toast_comm.comm_world
 
@@ -127,7 +171,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
         schedule.site_lat,
         schedule.site_lon,
         schedule.site_alt,
-        weather=args.weather,
+        weather=None,
     )
     telescope = toast.instrument.Telescope(
         schedule.telescope_name, focalplane=focalplane, site=site
@@ -141,26 +185,29 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
 
     #Load SimGround
 
-    sim_ground = toast.ops.SimGround(weather=args.weather)
+    sim_ground = toast.ops.SimGround()
+    sim_ground.weather = args.weather
     sim_ground.telescope = telescope
     sim_ground.schedule = schedule
     sim_ground.scan_rate_az =  args.scan_rate_az
     sim_ground.scan_accel_az = args.scan_accel_az
     sim_ground.max_pwv = 1.41 *u.mm
-    
+    sim_ground.median_weather = True
+
     #=============================#
     ### El Nod Tests ###
 
-    sim_ground.scan_rate_el = 1.5 * (u.deg / u.s) #rate allowed by mount
-    sim_ground.el_mod_amplitude = 1.0 * u.deg #1.0
-    sim_ground.el_mod_rate = 0.1 * u.Hz #10 sec sinosoid, 0.1
-    sim_ground.el_mod_sine = True
-    sim_ground.elnod_every_scan = False
-    
+    # sim_ground.scan_rate_el = 1.5 * (u.deg / u.s) #rate allowed by mount
+    # sim_ground.el_mod_amplitude = 1.0 * u.deg #1.0
+    # sim_ground.el_mod_rate = 0.1 * u.Hz #10 sec sinosoid, 0.1
+    # sim_ground.el_mod_sine = True
+    # sim_ground.elnod_every_scan = False
+
+    #=============================#
     #=============================#
 
     sim_ground.apply(data)
-    
+
     log.info_rank(f"Number of Observations loaded: {len(data.obs)}", world_comm)
 
     #Noise Model
@@ -202,9 +249,9 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
         #check if this file exists, else raise runtime error
         if not os.path.exists(hp_input_map):
             raise RuntimeError(f"Input map file not found: {hp_input_map}")
-        
+
         scan_map = toast.ops.ScanHealpixMap(file=hp_input_map)
-        scan_map.enabled = args.scan_inmap  
+        scan_map.enabled = args.scan_inmap
         scan_map.pixel_pointing = pixels_radec
         scan_map.stokes_weights = weights_radec
         scan_map.apply(data)
@@ -217,8 +264,8 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     #Atmosphere set-up
     rand_realisation = random.randint(10000, 99999)
     tel_fov = 1.5* u.deg # 4* u.deg , changed 17.02.2025
-    cache_dir = None
-    # cache_dir = "./atm_cache"
+    # cache_dir = None
+    cache_dir = "./atm_cache"
 
     sim_atm_coarse =toast.ops.SimAtmosphere(
                     name="sim_atm_coarse",
@@ -266,7 +313,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
 
     sim_atm_fine.realization = rand_realisation
     sim_atm_fine.field_of_view = tel_fov
-    
+
     sim_atm_fine.detector_pointing = det_pointing_azel
     sim_atm_fine.enabled = args.sim_atm  # Toggle to False to disable
     sim_atm_fine.serial = False
@@ -274,7 +321,7 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
 
     log.info_rank("Applied small-scale Atmosphere simulation in", comm=world_comm, timer=timer)
     #------------------------#
-    
+
     #simulate detector noise
     sim_noise = toast.ops.SimNoise()
     sim_noise.noise_model = elevation_noise.out_model
@@ -285,34 +332,9 @@ def primecam_mockdata_pipeline(args, comm, focalplane, schedule, group_size):
     mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
     log.info_rank(f"After generating detector timestreams:  {mem}", world_comm)
 
-    field_name = (data.obs[0].name).split('-')[0]
-    n_dets = telescope.focalplane.n_detectors
-    #start_unix = data.obs[0].shared["times"][0]
-    #end_unix = data.obs[len(data.obs)-1].shared["times"][0]
-    #format_obs_startend = format_unix_times(start_unix, end_unix)
+    _save_sim_data(args, data, telescope, world_comm)
 
-    ### Write to h5
-    output_dir = args.h5_outdir
-    module_code = args.freq.to_string().split('.0')[0]
-    f_path = f"sim_PCAM{module_code}_h5_{field_name}_d{n_dets}"
-    save_dir = os.path.join(args.h5_outdir, f_path)
-    os.makedirs(save_dir, exist_ok=True)
-
-    log.info_rank(f"Writing timestream data to h5 files for \
-Field {field_name} observed at {args.freq.to_string()} \
-with {n_dets} detectors", world_comm)
-    log.info_rank(f"Writing h5 files to: {save_dir}", world_comm)
-
-    detdata_tosave = ["signal", "flags"]
-
-    for obs in data.obs:
-        io.save_hdf5(
-            obs=obs,
-            dir=save_dir,
-            detdata=detdata_tosave
-        )
-
-###==================================================###    
+###==================================================###
 
 # Main function
 def main():
@@ -322,16 +344,18 @@ def main():
             The schedule file must be in the 'input_files/schedules' directory.")
     # Required argument for the schedule file
     parser.add_argument('-s','--sch', required=True, help="Name of the schedule file")
-    parser.add_argument('-d', '--dets', 
-                        type=int, 
-                        default=100, 
+    parser.add_argument('-d', '--dets',
+                        type=int,
+                        default=100,
                         help="Number of detectors")
+    parser.add_argument('--tube-offset', action="store_true",
+                        help="Apply the module-to-boresight offset before trimming")
     parser.add_argument('-g','--grp_size', default=None, type=int, help="Group size (optional)")
 
     parsed_args = parser.parse_args()
-    
+
     args = Args(parsed_args)
-    
+
     #Set up logger and timer
     log_global = toast.utils.Logger.get()
     global_timer = toast.timing.Timer()
@@ -341,13 +365,13 @@ def main():
 
     # Initialize the communicator
     comm, procs, rank = toast.get_world()
-    
+
     # Initialize the TOAST logger
     if "OMP_NUM_THREADS" in os.environ:
         nthread = os.environ["OMP_NUM_THREADS"]
     else:
         nthread = "unknown number of"
-        
+
     log_global.info_rank(
         f"Executing PrimeCam workflow with {procs} MPI tasks, each with "
         f"{nthread} OpenMP threads at {datetime.now()}",
@@ -364,23 +388,24 @@ def main():
 
     mem = toast.utils.memreport(msg="(whole node)", comm=comm, silent=True)
     log_global.info_rank(f"Start of the workflow:  {mem}", comm)
-    
+
     log_global.info_rank(
         f"Begin set-up and monitors for Simulating timestream data for PrimeCam/FYST",
         comm)
 
-    # Focalplane file
-    try:
-        focalplane_file = f"dets_FP_PC280_{parsed_args.dets}_w2.h5"  
-        fp_filename = os.path.join("input_files/fp_files", focalplane_file)
-        det_table = QTable.read(fp_filename, path='dettable_trim')
-    except Exception as e:
-        log_global.error(f"Failed to load focalplane file: {fp_filename}. Error: {e}", comm)
-        raise  
-    
-    log_global.info_rank(f"Loading focalplane: {fp_filename}", comm)
-    
-    # instantiate a TOAST focalplane instance 
+    # Prepare once and share the in-memory QTable across all MPI ranks.
+    det_table = None
+    if rank == 0:
+        det_table = prepare_trimmed_table(
+            parsed_args.dets, tube_offset=parsed_args.tube_offset,
+        )
+    if comm is not None:
+        det_table = comm.bcast(det_table, root=0)
+
+    log_global.info_rank(
+        f"Prepared focalplane with {len(det_table)} detectors", comm)
+
+    # instantiate a TOAST focalplane instance
     width = args.fov
     focalplane = toast.instrument.Focalplane(
         detector_data=det_table,
@@ -392,14 +417,14 @@ def main():
     schedule_file = os.path.join("input_files/schedules",parsed_args.sch)
     schedule = toast.schedule.GroundSchedule()
     schedule.read(schedule_file, comm=comm)
-    
+
     # Run the simulation pipeline
     primecam_mockdata_pipeline(args, comm, focalplane, schedule, parsed_args.grp_size)
     log_global.info_rank(f"Wrote timestream data for {schedule_file} to disk", comm=comm)
 
-    
+
     log_global.info_rank("Full mock data generated in", comm=comm, timer=global_timer)
-    
+
     # Synchronize all ranks, so every process reaches this point before proceeding
     comm.barrier()
     if rank == 0:
@@ -409,7 +434,7 @@ def main():
             f"Timestream Simulation completed. Elapsed Time: {sim_elapsed_time/60.0:.2f} minutes",
             comm
             )
-    
+
 if __name__ == "__main__":
     world, procs, rank = toast.mpi.get_world()
     with toast.mpi.exception_guard(comm=world):

@@ -46,9 +46,9 @@ if [[ ! -z $3 ]]; then
 fi
 
 # Focalplane file
-# Run the fp_trim script with the specified number of detectors (NDETS)
-python -m scripts.fp_scripts.fp_trim $NDETS
-# Check if the fp_trim script executed successfully
+# Run the fp_prepare script with the specified number of detectors (NDETS)
+python -m scripts.fp_scripts.fp_prepare $NDETS
+# Check if the fp_prepare script executed successfully
 if [ $? -ne 0 ]; then
     # If there was an error, print an error message and exit the script
     echo "Error occurred in FP generation script. Exiting."

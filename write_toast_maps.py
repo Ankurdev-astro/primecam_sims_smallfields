@@ -133,9 +133,9 @@ def main():
     # Instantiate the LoadHDF5 operator
     loader = toast.ops.LoadHDF5(
         volume=data_input_path,  # Directory with observation files
-        # pattern=r"obs_.*_.*\.h5",               # Match files like '"obs_.*_.*\.h5"'
-        pattern = r".*\.h5$",                     # Match all h5 obs
-        # files=[],                               # Use volume + pattern to find files
+        pattern=r"-0-0\.h5$",               # Match files like '"obs_.*_.*\.h5"'
+        # pattern = r".*\.h5$",                     # Match all h5 obs
+        # files=[], # Specific files
         meta=meta_list,     
         shared=shared_list, 
         detdata=detdata_list,                       
@@ -180,17 +180,28 @@ def main():
     #=============================#
     ### Binning
     #=============================#
-    mode = "I"
+    mode = "IQU" # IQU or I
 
     log_global.info_rank(f"Generate Pointing...", comm)
     #center = RA, DEC in DEG
     #bounds = RA_MAX, RA_MIN, DEC_MIN, DEC_MAX
   
+    # To define a fixed rectangular map region
     pixels_wcs_radec = toast.ops.PixelsWCS(
-                                name="pixels_wcs_radec",
-                                projection="CAR",
-                                auto_bounds=True,
-                            )
+                            name="pixels_wcs_radec",
+                            projection="CAR",
+                            bounds=(80*u.deg, 88*u.deg, -8*u.deg, -3*u.deg),
+                            resolution=(1*u.arcmin, 1*u.arcmin),
+                            dimensions=(),
+                            auto_bounds=False,
+                        )
+
+    # To let TOAST define the map region
+    # pixels_wcs_radec = toast.ops.PixelsWCS(
+    #                             name="pixels_wcs_radec",
+    #                             projection="CAR",
+    #                             auto_bounds=True,
+    #                         )
     
     pixels_wcs_radec.enabled = True
 
@@ -210,6 +221,7 @@ def main():
     weights_radec.detector_pointing = det_pointing_radec
 
     log_global.info_rank(f"Binning into Maps...", comm)
+    log_global.info_rank(f"Map mode: {mode}", comm)
 
     #Set up the pointing used in the binning operator
     binner_final = toast.ops.BinMap(name="binner_final", pixel_dist="pix_dist_final")
